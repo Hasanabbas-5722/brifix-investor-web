@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { clearCredentials } from '@/lib/store/slices/authSlice';
-import { isTokenExpired } from '@/lib/utils/auth';
+
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import MobileNav from "./MobileNav";
@@ -24,23 +24,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         router.push('/signin');
       }
     } else {
-      if (isTokenExpired(token)) {
-        // Token is expired! Clean auth data
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        dispatch(clearCredentials());
-        setIsAuthenticated(false);
-        if (!isAuthPage) {
-          router.push('/signin');
-        }
-      } else {
-        setIsAuthenticated(true);
-        if (isAuthPage) {
-          router.push('/');
-        }
+      setIsAuthenticated(true);
+      if (isAuthPage) {
+        router.push('/');
       }
     }
-  }, [pathname, router, dispatch]);
+  }, [pathname, router]);
 
   // Don't render anything until we've checked auth state (prevents flash of dashboard)
   const isAuthPage = pathname === '/login' || pathname === '/signin' || pathname === '/forgot-password';
