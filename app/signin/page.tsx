@@ -34,29 +34,25 @@ export default function Signin() {
       console.log("Login response data without sensitive information", res.data.data);
       console.log(new Date());
 console.log(Date.now());
-      // Parity with the existing login endpoint structure
-      if (res?.data?.data?.message === "Users login successfull") {
-        console.log("Login response data", res.data.data);
-        const userData = res?.data?.data?.data[0];
+      const msg = res?.data?.data?.message || res?.data?.message || '';
+      const isSuccess = res?.data?.status === 'success' || msg.toLowerCase().includes('success');
+      const userData = res?.data?.data?.data?.[0] || res?.data?.data?.user || res?.data?.user || res?.data?.data;
+      const accessToken = userData?.accessToken || res?.data?.accessToken;
 
-        if (userData?.accessToken) {
-          // Store in localStorage
-          localStorage.setItem('accessToken', userData.accessToken);
-          localStorage.setItem('user', JSON.stringify(userData));
+      if (isSuccess && accessToken) {
+        // Store in localStorage
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('user', JSON.stringify(userData));
 
-          // Store in Redux
-          dispatch(setCredentials({
-            token: userData.accessToken,
-            user: userData,
-          }));
+        // Store in Redux
+        dispatch(setCredentials({
+          token: accessToken,
+          user: userData,
+        }));
 
-          // Force soft or hard navigation depending on design
-          router.push('/');
-        } else {
-          setError('Login succeeded but no access token received.');
-        }
+        router.replace('/');
       } else {
-        setError(res?.data?.data?.message || 'Login failed');
+        setError(msg || 'Login failed');
       }
     } catch (err: any) {
       console.error("Login response error", err);

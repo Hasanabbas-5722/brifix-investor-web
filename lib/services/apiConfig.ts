@@ -1,6 +1,6 @@
 /** Flask / Socket.IO host without trailing path (same as RN hard-coded host pattern). */
 export const API_ORIGIN = (
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://34.14.191.69:6001'
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:6001'
 ).replace(/\/$/, '');
 
 /** REST base for routes mirrored from `brifix_investors_frontend/src/api/AuthService.js`. */
@@ -26,6 +26,7 @@ export const COUPON_API_BASE_URL = (process.env.NEXT_PUBLIC_COUPON_API_BASE_URL 
 );
 
 export const API_ENDPOINTS = {
+  REGISTER: '/users/register',
   LOGIN: '/users/login',
   UPDATE_PASSWORD: '/users/forgot-password',
   VERIFY_OTP: '/verifyOtp',
@@ -50,6 +51,7 @@ export const API_ENDPOINTS = {
   NIFTY_LOSER: '/top/nifty_losser',
   DASHBOARD: '/top/get_top_gain_loss_dashboard',
   PREDICT: '/predict',
+  DAILY_PICKS: '/predict/daily-picks',
   GROWW_PROFILE: '/groww/groww_user_profile',
   GROWW_ORDER_LIST: '/groww/getOrderList',
   MARKET_STATUS: '/market_status',

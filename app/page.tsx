@@ -6,6 +6,7 @@ import TradingViewWidget from './components/TradingViewWidget';
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   ChevronRight, Flame, Zap, Star, BarChart3, Newspaper, Clock,
+  Sparkles, Target, Shield, ArrowRight,
 } from 'lucide-react';
 import { authService } from '@/lib/services/authService';
 import { useSocket } from '@/lib/services/useSocket';
@@ -53,18 +54,28 @@ const INDEX_CHART_SYMBOLS: Record<string, string> = {
 
 export default function Dashboard() {
   const router = useRouter();
-  const [marketStatus, setMarketStatus] = useState("Closed");
-
-
+  const dispatch = useDispatch();
   const indicesData = useSelector((state: any) => state.indexData);
   const token = useSelector((state: any) => state.auth.token);
-  // console.log("indicesData", indicesData)
+
+  const [marketStatus, setMarketStatus] = useState("Closed");
+  const [tab, setTab] = useState<'gainers' | 'losers'>('gainers');
+  const [topGainers, setTopGainers] = useState(gainers);
+  const [topLosers, setTopLosers] = useState(losers);
+  const [latestNews, setLatestNews] = useState(news);
+  const [dailyPicks, setDailyPicks] = useState<any[]>([]);
+  const [loadingPicks, setLoadingPicks] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [portfolioValue, setPortfolioValue] = useState('0');
+  const [selectedIndex, setSelectedIndex] = useState('NIFTY 50');
+
+  const { socket, isConnected, subscribeToIndexes } = useSocket();
 
   useEffect(() => {
-    console.log("marketStatus api :::::::::::::::::::::::::::")
     fetchMarketStatus();
     fetchTopMoves();
     fetchInitialIndexData();
+    fetchDailyRecommendations();
   }, []);
 
   const fetchInitialIndexData = async () => {
@@ -111,8 +122,9 @@ export default function Dashboard() {
   const fetchMarketStatus = async () => {
     try {
       const res = await authService.marketStatus();
-      console.log("res", res.data.market_status[0].marketStatus)
-      setMarketStatus(res?.data?.market_status?.[0]?.marketStatus)
+      if (res?.data?.market_status?.[0]?.marketStatus) {
+        setMarketStatus(res.data.market_status[0].marketStatus);
+      }
     } catch (error) {
       console.error('Error fetching market status:', error);
     }
@@ -186,24 +198,28 @@ export default function Dashboard() {
     }
   };
 
+  const fetchDailyRecommendations = async () => {
+    setLoadingPicks(true);
+    try {
+      const res = await authService.getDailyRecommendations();
+      const picks = res?.data?.data ?? res?.data;
+      if (Array.isArray(picks) && picks.length > 0) {
+        setDailyPicks(picks);
+      }
+    } catch (err) {
+      console.error('Error fetching daily recommendations:', err);
+    } finally {
+      setLoadingPicks(false);
+    }
+  };
+
   const indices = [
     { name: 'NIFTY 50', value: indicesData?.nifty50?.value, change: indicesData?.nifty50?.difference, pct: indicesData?.nifty50?.percentage, up: indicesData?.nifty50?.sign },
     { name: 'BANK NIFTY', value: indicesData?.banknifty?.value, change: indicesData?.banknifty?.difference, pct: indicesData?.banknifty?.percentage, up: indicesData?.banknifty?.sign },
     { name: 'FIN NIFTY', value: indicesData?.finnifty?.value, change: indicesData?.finnifty?.difference, pct: indicesData?.finnifty?.percentage, up: indicesData?.finnifty?.sign },
-    // { name: 'SENSEX', value: '80,218.37', change: '+612.21', pct: '+0.77%', up: true },
   ];
 
-  const [tab, setTab] = useState<'gainers' | 'losers'>('gainers');
-  const [marketIndices, setMarketIndices] = useState(indices);
-  const [topGainers, setTopGainers] = useState(gainers);
-  const [topLosers, setTopLosers] = useState(losers);
-  const [latestNews, setLatestNews] = useState(news);
-  const [isLoading, setIsLoading] = useState(true);
-  const [portfolioValue, setPortfolioValue] = useState('0');
-  const [selectedIndex, setSelectedIndex] = useState('NIFTY 50');
 
-  const { socket, isConnected, subscribeToIndexes } = useSocket();
-  const dispatch = useDispatch();
 
   useEffect(() => {
     // fetchInitialData();
@@ -299,16 +315,23 @@ export default function Dashboard() {
             sign: sign
           }));
         }
-        // This is a placeholder mapping, actual data structure may vary
         if (Array.isArray(data)) {
-          const mapped = data.map((item: any) => ({
-            name: item.name || item.symbol,
-            value: item.price?.toLocaleString('en-IN') || '0',
-            change: item.change?.toFixed(2) || '0',
-            pct: `${item.pChange?.toFixed(2) || '0'}%`,
-            up: item.change >= 0
-          }));
-          setMarketIndices(mapped);
+          data.forEach((item: any) => {
+            const name = (item.name || item.symbol || '').toUpperCase();
+            const actionPayload = {
+              value: String(item.value ?? item.price ?? '0'),
+              difference: String(item.change ?? '0'),
+              percentage: String(item.percentage ?? item.pChange ?? '0'),
+              sign: item.sign || (Number(item.change) >= 0 ? '+' : '-'),
+            };
+            if (name.includes('BANK')) {
+              dispatch(updateBankNifty(actionPayload));
+            } else if (name.includes('FIN')) {
+              dispatch(updateFinNifty(actionPayload));
+            } else if (name.includes('NIFTY')) {
+              dispatch(updateNifty50(actionPayload));
+            }
+          });
         }
       });
 
@@ -593,6 +616,161 @@ export default function Dashboard() {
             </div>
           </Link>
         ))}
+      </div>
+
+
+      {/* ── Today's AI Stock Recommendations ── */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                <Sparkles size={18} color="#a855f7" /> Today's AI Stock Recommendations
+              </h2>
+              <span style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: '0.05em',
+                background: 'linear-gradient(135deg, rgba(168,85,247,0.2) 0%, rgba(99,102,241,0.2) 100%)',
+                color: '#c084fc', padding: '3px 8px', borderRadius: 99,
+                border: '1px solid rgba(168,85,247,0.3)',
+              }}>
+                BUY SIGNALS
+              </span>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4, marginBottom: 0 }}>
+              Algorithmic high-probability trade setups scored for today's market session
+            </p>
+          </div>
+          <Link href="/predictions" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent-light)', fontWeight: 600 }}>
+            Deep Prediction AI <ChevronRight size={13} />
+          </Link>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+          {loadingPicks ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="card" style={{ padding: 20, minHeight: 180, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ width: '50%', height: 16, background: 'var(--bg-elevated)', borderRadius: 6 }} />
+                <div style={{ width: '80%', height: 28, background: 'var(--bg-elevated)', borderRadius: 6 }} />
+                <div style={{ width: '100%', height: 40, background: 'var(--bg-elevated)', borderRadius: 6, marginTop: 'auto' }} />
+              </div>
+            ))
+          ) : dailyPicks.length > 0 ? (
+            dailyPicks.slice(0, 4).map((pick: any) => (
+              <div
+                key={pick.symbol}
+                className="card card-hover fade-up"
+                style={{
+                  padding: '20px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 14,
+                  border: '1px solid rgba(168,85,247,0.25)',
+                  background: 'linear-gradient(180deg, rgba(168,85,247,0.04) 0%, var(--bg-card) 100%)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Header with signal and confidence */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: pick.signal === 'STRONG BUY' ? 'var(--green)' : '#38bdf8',
+                      background: pick.signal === 'STRONG BUY' ? 'var(--green-bg)' : 'rgba(56,189,248,0.15)',
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      letterSpacing: '0.04em'
+                    }}>
+                      {pick.signal}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 8 }}>
+                      {pick.sector}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>
+                    <Target size={13} /> {pick.confidence}% AI Conf
+                  </div>
+                </div>
+
+                {/* Stock symbol and price */}
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-1)', margin: 0 }}>
+                      {pick.symbol}
+                    </h3>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2, marginBottom: 0 }}>
+                      {pick.name}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p className="nums" style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>
+                      ₹{pick.current_price?.toLocaleString('en-IN')}
+                    </p>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>CMP</span>
+                  </div>
+                </div>
+
+                {/* Target & Stop Loss banner */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 8,
+                  background: 'var(--bg-elevated)',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  fontSize: 11
+                }}>
+                  <div>
+                    <span style={{ color: 'var(--text-3)', display: 'block' }}>1D Target</span>
+                    <span className="nums" style={{ fontWeight: 700, color: 'var(--green)' }}>
+                      ₹{pick.target_1d?.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-3)', display: 'block' }}>5D Target</span>
+                    <span className="nums" style={{ fontWeight: 700, color: 'var(--green)' }}>
+                      ₹{pick.target_5d?.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-3)', display: 'block' }}>Stop Loss</span>
+                    <span className="nums" style={{ fontWeight: 700, color: 'var(--red)' }}>
+                      ₹{pick.stop_loss?.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* AI Rationale */}
+                <p style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4, margin: 0 }}>
+                  💡 {pick.rationale}
+                </p>
+
+                {/* Action button */}
+                <Link
+                  href={`/predictions?symbol=${pick.symbol}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    background: 'var(--accent)',
+                    color: '#fff',
+                    textDecoration: 'none',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    marginTop: 'auto',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  Predict & Buy Setup <ArrowRight size={13} />
+                </Link>
+              </div>
+            ))
+          ) : null}
+        </div>
       </div>
 
 

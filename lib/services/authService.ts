@@ -2,6 +2,7 @@ import { apiClient } from './apiClient';
 import { API_ENDPOINTS } from './apiConfig';
 
 export const authService = {
+  register: (payload: unknown) => apiClient.post(API_ENDPOINTS.REGISTER, payload),
   login: (payload: unknown) => apiClient.post(API_ENDPOINTS.LOGIN, payload),
   updatePassword: (payload: unknown) => apiClient.post(API_ENDPOINTS.UPDATE_PASSWORD, payload),
   verifyOtp: (payload: unknown) => apiClient.post(API_ENDPOINTS.VERIFY_OTP, payload),
@@ -32,6 +33,7 @@ export const authService = {
     apiClient.get(API_ENDPOINTS.PREDICT, {
       params: { ...params, exchange: params.exchange || 'NSE' },
     }),
+  getDailyRecommendations: () => apiClient.get(API_ENDPOINTS.DAILY_PICKS),
   growwUserProfile: () => apiClient.get(API_ENDPOINTS.GROWW_PROFILE),
   growwOrderList: () => apiClient.get(API_ENDPOINTS.GROWW_ORDER_LIST),
   marketStatus: () => apiClient.get(API_ENDPOINTS.MARKET_STATUS),
