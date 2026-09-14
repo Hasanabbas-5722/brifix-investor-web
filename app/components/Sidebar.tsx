@@ -47,9 +47,10 @@ export default function Sidebar() {
         <Image
           src="/brifix-logo.png"
           alt="Brifix Logo"
-          width={42}
-          height={82}
-          style={{ borderRadius: 8, objectFit: 'contain' }}
+          width={40}
+          height={40}
+          style={{ borderRadius: 8, objectFit: 'contain', width: 'auto', height: 'auto' }}
+          priority
         />
         {/* </div> */}
       </Link>

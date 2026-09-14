@@ -1,16 +1,68 @@
 'use client';
 
 import { Bell, Search, ChevronDown, Zap, Crown, Star } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import NotificationModal from './NotificationModal';
 import { usePlan } from '@/lib/context/PlanContext';
+import { authService } from '@/lib/services/authService';
 
 export default function TopBar() {
   const { plan, isPro, isPremium } = usePlan();
   const [focused, setFocused] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [marketStatus, setMarketStatus] = useState<{
+    isOpen: boolean;
+    label: string;
+    detail: string;
+  }>({
+    isOpen: false,
+    label: 'CLOSED',
+    detail: 'Checking market schedule...',
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkStatus = async () => {
+      try {
+        const res = await authService.marketStatus();
+        if (!isMounted) return;
+        const data = res?.data;
+        const isOpen = Boolean(data?.is_open || data?.status?.toLowerCase() === 'open');
+        const detail = data?.status_detail || (isOpen ? 'Market is Open · Closes at 03:30 PM IST' : (data?.schedule?.next_session_label || 'Market is Closed · Opens at 09:15 AM IST'));
+        setMarketStatus({
+          isOpen,
+          label: isOpen ? 'LIVE' : 'CLOSED',
+          detail,
+        });
+      } catch {
+        if (!isMounted) return;
+        // Fallback to local IST check
+        try {
+          const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+          const day = nowIST.getDay();
+          const mins = nowIST.getHours() * 60 + nowIST.getMinutes();
+          const isOpen = day >= 1 && day <= 5 && mins >= 555 && mins < 930;
+          setMarketStatus({
+            isOpen,
+            label: isOpen ? 'LIVE' : 'CLOSED',
+            detail: isOpen ? 'Trading session is active (09:15 - 15:30 IST)' : 'Regular market closed (Opens at 09:15 AM IST)',
+          });
+        } catch {
+          setMarketStatus({ isOpen: false, label: 'CLOSED', detail: 'Market closed' });
+        }
+      }
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <header style={{
@@ -31,9 +83,9 @@ export default function TopBar() {
         <Image
           src="/brifix-logo.png"
           alt="Brifix Logo"
-          width={42}
-          height={42}
-          style={{ borderRadius: 8, objectFit: 'contain' }}
+          width={40}
+          height={40}
+          style={{ borderRadius: 8, objectFit: 'contain', width: 'auto', height: 'auto' }}
         />
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>Brifix</span>
       </Link>
@@ -64,15 +116,34 @@ export default function TopBar() {
       {/* Right side */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto' }}>
 
-        {/* Live badge */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          background: 'rgba(16,185,129,0.1)',
-          border: '1px solid rgba(16,185,129,0.2)',
-          borderRadius: 20, padding: '3px 10px',
-        }} className="hidden sm:flex">
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)' }}>LIVE</span>
+        {/* Live / Closed badge */}
+        <div
+          title={marketStatus.detail}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: marketStatus.isOpen ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${marketStatus.isOpen ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: 20, padding: '3px 10px',
+            cursor: 'default',
+          }}
+          className="hidden sm:flex"
+        >
+          <span
+            style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: marketStatus.isOpen ? 'var(--green)' : 'var(--text-3)',
+              animation: marketStatus.isOpen ? 'pulse-dot 2s ease-in-out infinite' : 'none',
+            }}
+          />
+          <span
+            style={{
+              fontSize: 11, fontWeight: 700,
+              color: marketStatus.isOpen ? 'var(--green)' : 'var(--text-2)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {marketStatus.label}
+          </span>
         </div>
 
         {/* Plan Badge */}
