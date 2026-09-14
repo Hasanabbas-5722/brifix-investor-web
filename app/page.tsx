@@ -497,12 +497,11 @@ export default function Dashboard() {
       </div>
 
       {/* ── Portfolio hero card ──────────── */}
-      <div className="card fade-up" style={{
+      {/* <div className="card fade-up" style={{
         padding: '28px 28px',
         background: 'linear-gradient(135deg, #0F1520 0%, #161E2E 50%, #1a1f35 100%)',
         position: 'relative', overflow: 'hidden',
       }}>
-        {/* Decorative glow */}
         <div style={{
           position: 'absolute', top: -60, right: -60,
           width: 200, height: 200, borderRadius: '50%',
@@ -523,7 +522,7 @@ export default function Dashboard() {
           <span className="badge-green">+0.00% today</span>
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Invested: ₹0.00</span>
         </div>
-      </div>
+      </div> */}
 
         {/* ── Market indices ───────────────── */}
         <div>
@@ -775,7 +774,7 @@ export default function Dashboard() {
 
 
       {/* ── Gainers / Losers ─────────────── */}
-      <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: "100px" }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <button
             onClick={() => setTab('gainers')}
@@ -854,7 +853,7 @@ export default function Dashboard() {
       </div> */}
 
       {/* ── News ─────────────────────────── */}
-      <div>
+      {/* <div>
         <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Newspaper size={16} color="var(--accent-light)" /> Latest News
         </h2>
@@ -888,7 +887,7 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
     </div>
   );

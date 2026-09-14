@@ -43,6 +43,9 @@ console.log(Date.now());
         // Store in localStorage
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('user', JSON.stringify(userData));
+        if (userData?.currentPlan || userData?.plan) {
+          localStorage.setItem('brifix_user_plan', (userData.currentPlan || userData.plan).toLowerCase());
+        }
 
         // Store in Redux
         dispatch(setCredentials({
@@ -172,16 +175,16 @@ console.log(Date.now());
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
             <label className="label" style={{ marginBottom: '8px', display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Email Address
+              Email or Username
             </label>
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', display: 'flex', alignItems: 'center' }}>
                 <Mail size={16} />
               </div>
               <input
-                type="email"
+                type="text"
                 className="input"
-                placeholder="name@example.com"
+                placeholder="name@example.com or username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={{
@@ -291,7 +294,24 @@ console.log(Date.now());
           </button>
         </form>
 
-        <div style={{ marginTop: '32px', textAlign: 'center' }}>
+        <div style={{ marginTop: '22px', textAlign: 'center' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+            Don&apos;t have an account?{' '}
+            <Link
+              href="/register"
+              style={{
+                color: 'var(--accent-light)',
+                fontWeight: 700,
+                textDecoration: 'none',
+                marginLeft: '4px',
+              }}
+            >
+              Create an account
+            </Link>
+          </p>
+        </div>
+
+        <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
             <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
             <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>

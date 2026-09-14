@@ -16,7 +16,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    const isAuthPage = pathname === '/login' || pathname === '/signin' || pathname === '/forgot-password';
+    const isAuthPage = pathname === '/login' || pathname === '/signin' || pathname === '/register' || pathname === '/signup' || pathname === '/forgot-password';
 
     if (!token) {
       setIsAuthenticated(false);
@@ -42,7 +42,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router, dispatch]);
 
-  const isAuthPage = pathname === '/login' || pathname === '/signin' || pathname === '/forgot-password';
+  const isAuthPage = pathname === '/login' || pathname === '/signin' || pathname === '/register' || pathname === '/signup' || pathname === '/forgot-password';
 
   // If on a protected route and not authenticated, render loading screen while redirecting
   if (!isAuthPage && !isAuthenticated) {

@@ -4,7 +4,11 @@ import {
   User, Shield, CreditCard, Bell, Moon, Lock,
   HelpCircle, FileText, Settings, LogOut, Camera, Crown, ChevronRight, Zap, Star, Sparkles
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearCredentials } from '@/lib/store/slices/authSlice';
 import { usePlan } from '@/lib/context/PlanContext';
 
 const sections = [
@@ -12,7 +16,7 @@ const sections = [
     title: 'Account',
     items: [
       { label: 'Personal Information', Icon: User,       desc: 'View and edit your details',   badge: undefined as string | undefined },
-      { label: 'KYC Verification',     Icon: Shield,     desc: 'Identity verification status', badge: 'Pending' },
+      { label: 'KYC Verification',     Icon: Shield,     desc: 'Identity verification status', badge: 'Verified' },
       { label: 'Bank & Payment',       Icon: CreditCard, desc: 'Manage payment methods',       badge: undefined },
     ],
   },
@@ -35,7 +39,33 @@ const sections = [
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const dispatch = useDispatch();
   const { plan, planInfo, isFree, isPro, isPremium } = usePlan();
+  const reduxUser = useSelector((state: any) => state.auth.user);
+  const [user, setUser] = useState<any>(reduxUser);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const handleSignOut = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('brifix_user_plan');
+    dispatch(clearCredentials());
+    router.replace('/signin');
+  };
+
+  const displayName = user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '') || 'Brifix User';
+  const displayEmail = user?.email || 'investor@brifix.in';
+  const displayUsername = user?.username ? `@${user.username}` : '';
+  const initial = (displayName || displayUsername || 'B').replace('@', '')[0]?.toUpperCase() || 'B';
 
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 600 }}>
@@ -52,7 +82,7 @@ export default function ProfilePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 8px 24px rgba(99,102,241,0.35)',
           }}>
-            <span style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>B</span>
+            <span style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>{initial}</span>
           </div>
           <button style={{
             position: 'absolute', bottom: 0, right: 0,
@@ -64,8 +94,11 @@ export default function ProfilePage() {
             <Camera size={12} />
           </button>
         </div>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>Brifix User</h2>
-        <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>investor@brifix.in</p>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)', marginBottom: 2 }}>{displayName}</h2>
+        {displayUsername && (
+          <p style={{ fontSize: 13, color: 'var(--accent-light)', fontWeight: 600, marginBottom: 4 }}>{displayUsername}</p>
+        )}
+        <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>{displayEmail}</p>
         
         {/* Dynamic Plan Badge linking to Pricing */}
         <Link href="/pricing" style={{
@@ -146,15 +179,19 @@ export default function ProfilePage() {
       ))}
 
       {/* Sign out */}
-      <button className="card" style={{
-        width: '100%', padding: '14px 20px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        fontSize: 13, fontWeight: 700, color: 'var(--red)',
-        border: '1px solid var(--border)', borderRadius: 'var(--r-xl)',
-        cursor: 'pointer', background: 'var(--bg-card)', transition: 'background 0.15s',
-      }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--red-bg)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}>
+      <button
+        onClick={handleSignOut}
+        className="card"
+        style={{
+          width: '100%', padding: '14px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontSize: 13, fontWeight: 700, color: 'var(--red)',
+          border: '1px solid var(--border)', borderRadius: 'var(--r-xl)',
+          cursor: 'pointer', background: 'var(--bg-card)', transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--red-bg)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+      >
         <LogOut size={16} /> Sign Out
       </button>
 
