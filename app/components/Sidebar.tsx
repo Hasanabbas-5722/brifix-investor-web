@@ -3,19 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { LayoutDashboard, BarChart3, BrainCircuit, Briefcase, CreditCard, User, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, BarChart3, BrainCircuit, Star, Briefcase, CreditCard, User, TrendingUp } from 'lucide-react';
+import { usePlan } from '@/lib/context/PlanContext';
 
 const NAV = [
   { href: '/', label: 'Dashboard', Icon: LayoutDashboard },
   { href: '/chart', label: 'Charts', Icon: BarChart3 },
   { href: '/predictions', label: 'AI Predict', Icon: BrainCircuit },
-  { href: '/portfolio', label: 'Portfolio', Icon: Briefcase },
+  { href: '/watchlist', label: 'Watchlist', Icon: Star },
+  // { href: '/portfolio', label: 'Portfolio', Icon: Briefcase },
   { href: '/pricing', label: 'Pricing', Icon: CreditCard },
   { href: '/profile', label: 'Profile', Icon: User },
 ];
 
 export default function Sidebar() {
   const path = usePathname();
+  const { plan, isFree } = usePlan();
 
   return (
     <aside style={{
@@ -85,6 +88,16 @@ export default function Sidebar() {
                   }} />
                 )}
                 <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+                {href === '/predictions' && isFree && (
+                  <span style={{
+                    position: 'absolute', top: 3, right: 3,
+                    fontSize: 8, fontWeight: 900, background: 'var(--accent)',
+                    color: '#fff', padding: '1px 3px', borderRadius: 4,
+                    letterSpacing: '0.04em', lineHeight: 1,
+                  }}>
+                    PRO
+                  </span>
+                )}
               </Link>
 
               {/* Tooltip */}

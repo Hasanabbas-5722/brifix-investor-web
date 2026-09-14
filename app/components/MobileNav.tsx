@@ -12,8 +12,11 @@ const TABS = [
   { href: '/pricing',     label: 'Plans',    Icon: CreditCard },
 ];
 
+import { usePlan } from '@/lib/context/PlanContext';
+
 export default function MobileNav() {
   const path = usePathname();
+  const { isFree } = usePlan();
 
   return (
     <nav className="lg:hidden" style={{
@@ -35,8 +38,21 @@ export default function MobileNav() {
             color: active ? 'var(--accent-light)' : 'var(--text-3)',
             textDecoration: 'none', height: '100%',
             transition: 'color 0.15s',
+            position: 'relative',
           }}>
-            <Icon size={21} strokeWidth={active ? 2.2 : 1.6} />
+            <div style={{ position: 'relative' }}>
+              <Icon size={21} strokeWidth={active ? 2.2 : 1.6} />
+              {href === '/predictions' && isFree && (
+                <span style={{
+                  position: 'absolute', top: -3, right: -12,
+                  fontSize: 7, fontWeight: 900, background: 'var(--accent)',
+                  color: '#fff', padding: '1px 3px', borderRadius: 3,
+                  letterSpacing: '0.04em', lineHeight: 1,
+                }}>
+                  PRO
+                </span>
+              )}
+            </div>
             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               {label}
             </span>

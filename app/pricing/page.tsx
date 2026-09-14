@@ -1,26 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Star, Zap, Crown, Sparkles, Plus, Minus } from 'lucide-react';
+import { Check, Star, Zap, Crown, Sparkles, Plus, Minus, CheckCircle2 } from 'lucide-react';
+import { usePlan, PlanType } from '@/lib/context/PlanContext';
 
 const plans = [
   {
+    id: 'free' as PlanType,
     name: 'Free', price: 0, period: '/forever', desc: 'Get started with basic features',
     Icon: Star, from: '#475569', to: '#64748B',
     features: ['Basic market data', 'NIFTY 50 tracking', 'Limited news feed', '1 watchlist (10 stocks)', 'Community support'],
-    cta: 'Current Plan', active: true, popular: false,
+    popular: false,
   },
   {
+    id: 'pro' as PlanType,
     name: 'Pro', price: 499, period: '/month', desc: 'For serious investors',
     Icon: Zap, from: '#6366F1', to: '#818CF8',
     features: ['Everything in Free', 'Real-time market data', 'AI predictions (50/day)', 'Advanced TradingView charts', 'Portfolio analytics', '10 watchlists', 'Price alerts'],
-    cta: 'Upgrade to Pro', active: false, popular: true,
+    popular: true,
   },
   {
+    id: 'premium' as PlanType,
     name: 'Premium', price: 999, period: '/month', desc: 'Maximum power & insights',
     Icon: Crown, from: '#D97706', to: '#F59E0B',
     features: ['Everything in Pro', 'Unlimited AI predictions', 'Options chain analysis', 'Institutional flow data', 'Custom screeners', 'API access', 'Dedicated support'],
-    cta: 'Go Premium', active: false, popular: false,
+    popular: false,
   },
 ];
 
@@ -31,8 +35,18 @@ const faqs = [
 ];
 
 export default function PricingPage() {
+  const { plan, setPlan } = usePlan();
   const [yr, setYr] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const handleSelectPlan = (targetPlan: PlanType) => {
+    if (targetPlan === plan) return;
+    setPlan(targetPlan);
+    const planName = targetPlan.charAt(0).toUpperCase() + targetPlan.slice(1);
+    setFeedback(`Active plan updated to ${planName}! Features updated.`);
+    setTimeout(() => setFeedback(null), 4000);
+  };
 
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: 960 }}>
@@ -73,22 +87,100 @@ export default function PricingPage() {
             Yearly <span className="badge-green">Save 20%</span>
           </span>
         </div>
+
+        {/* Active Plan Selector & Feedback */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+          padding: '12px 18px', borderRadius: 14,
+          background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
+          maxWidth: 480, margin: '20px auto 0', textAlign: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            <span style={{ color: 'var(--text-3)' }}>Current Active Plan:</span>
+            <span style={{
+              fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20,
+              background: plan === 'premium' ? 'rgba(245,158,11,0.15)' : plan === 'pro' ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
+              color: plan === 'premium' ? '#F59E0B' : plan === 'pro' ? 'var(--accent-light)' : 'var(--text-2)',
+              textTransform: 'uppercase', letterSpacing: '0.04em',
+            }}>
+              {plan}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-3)' }}>
+            <span>Quick test switch:</span>
+            {(['free', 'pro', 'premium'] as const).map(pKey => (
+              <button
+                key={pKey}
+                onClick={() => handleSelectPlan(pKey)}
+                style={{
+                  padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                  textTransform: 'uppercase', cursor: 'pointer',
+                  border: plan === pKey ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: plan === pKey ? 'var(--accent-dim)' : 'transparent',
+                  color: plan === pKey ? 'var(--accent-light)' : 'var(--text-3)',
+                }}
+              >
+                {pKey}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {feedback && (
+          <div className="fade-in" style={{
+            padding: '10px 16px', borderRadius: 10,
+            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)',
+            color: 'var(--green)', fontSize: 13, fontWeight: 600, textAlign: 'center',
+            maxWidth: 480, margin: '14px auto 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}>
+            <CheckCircle2 size={16} />
+            <span>{feedback}</span>
+          </div>
+        )}
       </div>
 
       {/* Plans */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }} className="grid-3-md">
         {plans.map(p => {
+          const isCurrent = plan === p.id;
           const price = yr && p.price > 0 ? Math.round(p.price * 0.8 * 12) : p.price;
           const period = yr && p.price > 0 ? '/year' : p.period;
+
+          let ctaText = 'Select Plan';
+          if (isCurrent) {
+            ctaText = 'Current Plan';
+          } else if (p.id === 'free') {
+            ctaText = 'Downgrade to Free';
+          } else if (p.id === 'pro') {
+            ctaText = 'Upgrade to Pro';
+          } else if (p.id === 'premium') {
+            ctaText = 'Go Premium';
+          }
 
           return (
             <div key={p.name} className="card card-hover fade-up" style={{
               padding: '28px 24px', display: 'flex', flexDirection: 'column',
               position: 'relative',
-              border: p.popular ? '1px solid rgba(99,102,241,0.4)' : '1px solid var(--border)',
-              boxShadow: p.popular ? '0 0 32px rgba(99,102,241,0.12)' : 'none',
+              border: isCurrent
+                ? '1px solid rgba(34,197,94,0.4)'
+                : p.popular
+                ? '1px solid rgba(99,102,241,0.4)'
+                : '1px solid var(--border)',
+              boxShadow: isCurrent
+                ? '0 0 32px rgba(34,197,94,0.12)'
+                : p.popular
+                ? '0 0 32px rgba(99,102,241,0.12)'
+                : 'none',
             }}>
-              {p.popular && (
+              {isCurrent ? (
+                <div style={{
+                  position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+                  background: 'var(--green)', color: '#000',
+                  fontSize: 10, fontWeight: 800, padding: '4px 14px', borderRadius: 20,
+                  letterSpacing: '0.06em', textTransform: 'uppercase',
+                  boxShadow: '0 4px 12px rgba(34,197,94,0.4)',
+                }}>Current Plan</div>
+              ) : p.popular ? (
                 <div style={{
                   position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
                   background: 'var(--accent)', color: '#fff',
@@ -96,7 +188,7 @@ export default function PricingPage() {
                   letterSpacing: '0.06em', textTransform: 'uppercase',
                   boxShadow: '0 4px 12px rgba(99,102,241,0.4)',
                 }}>Most Popular</div>
-              )}
+              ) : null}
 
               <div style={{
                 width: 44, height: 44, borderRadius: 12, marginBottom: 16,
@@ -127,10 +219,19 @@ export default function PricingPage() {
               </ul>
 
               <button
-                className={p.active ? 'btn-ghost' : p.popular ? 'btn-primary' : 'btn-ghost'}
-                style={{ height: 44, fontSize: 13, borderRadius: 10, width: '100%', cursor: p.active ? 'default' : 'pointer' }}
+                onClick={() => handleSelectPlan(p.id)}
+                disabled={isCurrent}
+                className={isCurrent ? 'btn-ghost' : p.popular ? 'btn-primary' : 'btn-ghost'}
+                style={{
+                  height: 44, fontSize: 13, borderRadius: 10, width: '100%',
+                  cursor: isCurrent ? 'default' : 'pointer',
+                  opacity: isCurrent ? 0.75 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  fontWeight: 700,
+                }}
               >
-                {p.cta}
+                {isCurrent && <CheckCircle2 size={15} color="var(--green)" />}
+                {ctaText}
               </button>
             </div>
           );

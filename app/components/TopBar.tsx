@@ -1,12 +1,16 @@
 'use client';
 
-import { Bell, Search, ChevronDown } from 'lucide-react';
+import { Bell, Search, ChevronDown, Zap, Crown, Star } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import NotificationModal from './NotificationModal';
+import { usePlan } from '@/lib/context/PlanContext';
 
 export default function TopBar() {
+  const { plan, isPro, isPremium } = usePlan();
   const [focused, setFocused] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   return (
     <header style={{
@@ -71,27 +75,62 @@ export default function TopBar() {
           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)' }}>LIVE</span>
         </div>
 
-        {/* Bell */}
-        <button style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', position: 'relative',
-          color: 'var(--text-2)',
-          transition: 'border-color 0.15s',
-        }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-          aria-label="Notifications">
-          <Bell size={16} />
+        {/* Plan Badge */}
+        <Link
+          href="/pricing"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: isPremium ? 'rgba(245,158,11,0.12)' : isPro ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${isPremium ? 'rgba(245,158,11,0.3)' : isPro ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: 20, padding: '3px 9px',
+            textDecoration: 'none', transition: 'all 0.15s',
+          }}
+          title="Click to view or upgrade your plan"
+        >
+          {isPremium ? (
+            <Crown size={12} color="#F59E0B" />
+          ) : isPro ? (
+            <Zap size={12} color="var(--accent-light)" />
+          ) : (
+            <Star size={12} color="var(--text-3)" />
+          )}
           <span style={{
-            position: 'absolute', top: 8, right: 8,
-            width: 6, height: 6, borderRadius: '50%',
-            background: 'var(--accent)',
-            border: '1.5px solid var(--bg-card)',
-          }} />
-        </button>
+            fontSize: 10, fontWeight: 800,
+            color: isPremium ? '#F59E0B' : isPro ? 'var(--accent-light)' : 'var(--text-2)',
+            letterSpacing: '0.04em', textTransform: 'uppercase',
+          }}>
+            {plan}
+          </span>
+        </Link>
+
+        {/* Bell */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setNotifOpen(v => !v)}
+            style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: notifOpen ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+              border: `1px solid ${notifOpen ? 'var(--accent)' : 'var(--border)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', position: 'relative',
+              color: notifOpen ? 'var(--accent-light)' : 'var(--text-2)',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+            onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.borderColor = 'var(--border)'; }}
+            aria-label="Notifications"
+          >
+            <Bell size={16} />
+            <span style={{
+              position: 'absolute', top: 8, right: 8,
+              width: 6, height: 6, borderRadius: '50%',
+              background: 'var(--accent)',
+              border: '1.5px solid var(--bg-card)',
+            }} />
+          </button>
+
+          <NotificationModal isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+        </div>
 
         {/* User */}
         <button style={{

@@ -203,8 +203,26 @@ body {
 .input:focus { border-color: var(--accent); }
 
 /* ── Page wrapper ────────────────────────── */
-.page { padding: 24px 20px; max-width: 1100px; margin: 0 auto; }
-@media (min-width: 640px) { .page { padding: 28px 28px; } }
+.page {
+  padding: 24px 20px calc(88px + env(safe-area-inset-bottom, 0px));
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (min-width: 1024px) {
+  .page {
+    padding: 28px 28px 48px;
+  }
+}
+
+/* ── Chart Container Responsive Height ───── */
+.chart-container-height {
+  height: calc(100dvh - 128px);
+}
+@media (min-width: 1024px) {
+  .chart-container-height {
+    height: calc(100dvh - 64px);
+  }
+}
 
 /* ── Responsive grid helpers ─────────────── */
 @media (max-width: 639px) {

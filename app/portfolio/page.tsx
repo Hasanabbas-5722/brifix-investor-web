@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Briefcase, ArrowUpRight, PieChart, Eye, EyeOff, BarChart3, RefreshCcw, TrendingUp, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Briefcase, ArrowUpRight, PieChart, Eye, EyeOff, BarChart3, RefreshCcw, TrendingUp, Loader2, Lock } from 'lucide-react';
 import { authService } from '@/lib/services/authService';
-import { useEffect } from 'react';
+import { usePlan } from '@/lib/context/PlanContext';
 
 const summary = { totalValue: 12064308.5, investedValue: 10500000, todayPL: 128048, totalPL: 1564308.5, totalPLPct: 14.9 };
 
@@ -26,6 +27,7 @@ const allocation = [
 ];
 
 export default function PortfolioPage() {
+  const { isFree } = usePlan();
   const [show, setShow] = useState(true);
   const [sort, setSort] = useState<'value' | 'change'>('value');
   const [holdingsList, setHoldingsList] = useState(holdings);
@@ -114,11 +116,30 @@ export default function PortfolioPage() {
         ))}
       </div>
 
-      {/* Sector allocation */}
+      {/* Sector allocation & analytics */}
       <div className="card" style={{ padding: '20px 22px' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <PieChart size={16} color="var(--text-2)" /> Sector Allocation
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PieChart size={16} color="var(--text-2)" /> Sector Allocation & Risk
+          </h3>
+          {isFree ? (
+            <Link
+              href="/pricing"
+              style={{
+                fontSize: 10, fontWeight: 800, color: 'var(--accent-light)',
+                background: 'var(--accent-dim)', border: '1px solid rgba(99,102,241,0.3)',
+                padding: '3px 8px', borderRadius: 20, textDecoration: 'none',
+                display: 'flex', alignItems: 'center', gap: 4
+              }}
+            >
+              <Lock size={10} /> PRO ANALYTICS
+            </Link>
+          ) : (
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', padding: '2px 8px', borderRadius: 20 }}>
+              PRO UNLOCKED
+            </span>
+          )}
+        </div>
         <div style={{ height: 8, borderRadius: 99, overflow: 'hidden', display: 'flex', background: 'var(--bg-elevated)', marginBottom: 16 }}>
           {allocation.map(s => (
             <div key={s.name} style={{ height: '100%', width: `${s.pct}%`, background: s.color }} />
@@ -133,6 +154,19 @@ export default function PortfolioPage() {
             </div>
           ))}
         </div>
+        {isFree && (
+          <div style={{
+            marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8
+          }}>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              ⚡ Advanced risk attribution & Sharpe ratio analysis available on Pro plan.
+            </span>
+            <Link href="/pricing" style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-light)', textDecoration: 'none' }}>
+              Upgrade to Pro →
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Holdings */}

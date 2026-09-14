@@ -19,6 +19,14 @@ export const authService = {
   getAllDemoHoldings: (payload: unknown) =>
     apiClient.post(API_ENDPOINTS.GET_ALL_DEMO_HOLDING, payload),
   getWatchlist: () => apiClient.get(API_ENDPOINTS.WATCHLIST),
+  getWatchlistQuotes: (symbols?: string, tab?: string) =>
+    apiClient.get(API_ENDPOINTS.WATCHLIST, { params: { symbols, tab } }),
+  addToWatchlist: (payload: { symbol: string; name?: string; tab?: string }) =>
+    apiClient.post(`${API_ENDPOINTS.WATCHLIST}/add`, payload),
+  removeFromWatchlist: (payload: { symbol: string; tab?: string }) =>
+    apiClient.post(`${API_ENDPOINTS.WATCHLIST}/remove`, payload),
+  searchWatchlistSymbols: (q: string) =>
+    apiClient.get(`${API_ENDPOINTS.WATCHLIST}/search`, { params: { q } }),
   createPaymentOrder: (payload: unknown) =>
     apiClient.post(API_ENDPOINTS.CREATE_PAYMENT_ORDER, payload),
   verifyPayment: (payload: unknown) => apiClient.post(API_ENDPOINTS.PAYMENT_VERIFY, payload),

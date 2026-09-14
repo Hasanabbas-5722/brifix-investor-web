@@ -69,7 +69,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className="app-shell">
         <TopBar />
-        <main style={{ flex: 1, paddingBottom: "env(safe-area-inset-bottom)" }} className="pb-20 lg:pb-0">
+        <main style={{ flex: 1 }} className="pb-24 lg:pb-8">
           {children}
         </main>
       </div>

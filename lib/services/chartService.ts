@@ -14,16 +14,23 @@ export type ChartDataResponse = {
   success: boolean;
   data?: {
     symbol: string;
+    ticker?: string;
+    interval?: string;
+    period?: string;
     candles: ChartCandle[];
     currentPrice: number;
     previousClose: number;
+    dayHigh?: number;
+    dayLow?: number;
+    change?: number;
+    changePercent?: number;
   };
   error?: string;
 };
 
 /**
  * Flask route `chart_bp`: GET `{API_ORIGIN}/chart-data`
- * (not under `/api/v1`; see `brifix_investors_backend/app/routes/chart_routes.py`).
+ * Fetches genuine real-time and historical candlestick market data.
  */
 export async function fetchChartData(params: {
   symbol?: string;
@@ -32,10 +39,11 @@ export async function fetchChartData(params: {
 }) {
   const { data } = await axios.get<ChartDataResponse>(CHART_DATA_URL, {
     params: {
-      symbol: params.symbol ?? '^NSEI',
+      symbol: params.symbol ?? 'NIFTY 50',
       interval: params.interval ?? '1d',
-      period: params.period ?? '1mo',
+      period: params.period ?? '',
     },
+    timeout: 10000,
   });
   return data;
 }

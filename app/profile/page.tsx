@@ -2,8 +2,10 @@
 
 import {
   User, Shield, CreditCard, Bell, Moon, Lock,
-  HelpCircle, FileText, Settings, LogOut, Camera, Crown, ChevronRight,
+  HelpCircle, FileText, Settings, LogOut, Camera, Crown, ChevronRight, Zap, Star, Sparkles
 } from 'lucide-react';
+import Link from 'next/link';
+import { usePlan } from '@/lib/context/PlanContext';
 
 const sections = [
   {
@@ -33,6 +35,8 @@ const sections = [
 ];
 
 export default function ProfilePage() {
+  const { plan, planInfo, isFree, isPro, isPremium } = usePlan();
+
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 600 }}>
 
@@ -62,16 +66,34 @@ export default function ProfilePage() {
         </div>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>Brifix User</h2>
         <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>investor@brifix.in</p>
-        <div style={{
+        
+        {/* Dynamic Plan Badge linking to Pricing */}
+        <Link href="/pricing" style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)',
-          borderRadius: 20, padding: '4px 12px',
+          background: isPremium ? 'rgba(245,158,11,0.12)' : isPro ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.06)',
+          border: `1px solid ${isPremium ? 'rgba(245,158,11,0.3)' : isPro ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
+          borderRadius: 20, padding: '5px 14px', textDecoration: 'none',
         }}>
-          <Crown size={12} color="#F59E0B" />
-          <span style={{ fontSize: 10, fontWeight: 800, color: '#F59E0B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Premium Plan
+          {isPremium ? (
+            <Crown size={13} color="#F59E0B" />
+          ) : isPro ? (
+            <Zap size={13} color="var(--accent-light)" />
+          ) : (
+            <Star size={13} color="var(--text-3)" />
+          )}
+          <span style={{
+            fontSize: 11, fontWeight: 800,
+            color: isPremium ? '#F59E0B' : isPro ? 'var(--accent-light)' : 'var(--text-2)',
+            letterSpacing: '0.06em', textTransform: 'uppercase'
+          }}>
+            {planInfo.name} Plan
           </span>
-        </div>
+          {isFree && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-light)', marginLeft: 4 }}>
+              • Upgrade
+            </span>
+          )}
+        </Link>
       </div>
 
       {/* Stats */}

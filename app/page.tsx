@@ -42,7 +42,7 @@ const news = [
 const quickActions = [
   { label: 'Charts', Icon: BarChart3, href: '/chart', from: '#6366F1', to: '#818CF8' },
   { label: 'AI Predict', Icon: Zap, href: '/predictions', from: '#7C3AED', to: '#A78BFA' },
-  { label: 'Watchlist', Icon: Star, href: '/portfolio', from: '#D97706', to: '#F59E0B' },
+  { label: 'Watchlist', Icon: Star, href: '/watchlist', from: '#D97706', to: '#F59E0B' },
   { label: 'Heatmap', Icon: Flame, href: '/chart', from: '#DC2626', to: '#F43F5E' },
 ];
 
@@ -474,13 +474,13 @@ export default function Dashboard() {
                     height: 8,
                     borderRadius: '50%',
                     background: marketStatus === "Open" ? 'var(--green)' : 'var(--red)',
-                    boxShadow: `0 0 12px ${marketStatus === "Open" ? 'var(--green)' : 'var(--red)'}`,
+                    boxShadow: `0 0 12px ${marketStatus == "Open" ? 'var(--green)' : 'var(--red)'}`,
                     animation: 'pulse-dot 2s infinite'
                   }} />
                   <span style={{
                     fontSize: 12,
                     fontWeight: 800,
-                    color: marketStatus === "Open" ? 'var(--green)' : 'var(--red)',
+                    color: marketStatus == "Open" ? 'var(--green)' : 'var(--red)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
                   }}>

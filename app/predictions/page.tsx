@@ -5,9 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import {
   BrainCircuit, Search, Shield, Target, BarChart3,
   Activity, Building2, AlertTriangle, Loader2, Sparkles,
-  ArrowUpRight, ArrowDownRight, RefreshCw, CheckCircle2,
+  ArrowUpRight, ArrowDownRight, RefreshCw, CheckCircle2, Bell, Send, Zap, Crown, Lock
 } from 'lucide-react';
 import { authService } from '@/lib/services/authService';
+import { notificationService } from '@/lib/services/notificationService';
+import { usePlan } from '@/lib/context/PlanContext';
+import ProFeatureLock from '@/app/components/ProFeatureLock';
 
 const STOCKS = [
   { symbol: 'RELIANCE',   exchange: 'NSE', name: 'Reliance Industries' },
@@ -46,10 +49,13 @@ function PredictionsContent() {
   const [sel, setSel] = useState<any>(
     initialSymbol ? { symbol: initialSymbol.toUpperCase(), exchange: 'NSE', name: initialSymbol.toUpperCase() } : null
   );
+  const { plan, isFree, isPro, isPremium, setPlan } = usePlan();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [dailyPicks, setDailyPicks] = useState<any[]>([]);
+  const [pushingAlert, setPushingAlert] = useState(false);
+  const [pushFeedback, setPushFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     // Load daily AI recommendations
@@ -62,6 +68,30 @@ function PredictionsContent() {
       })
       .catch((e) => console.error('Error fetching daily recommendations:', e));
   }, []);
+
+  const handlePushTopPick = async () => {
+    setPushingAlert(true);
+    setPushFeedback(null);
+    try {
+      const subRes = await notificationService.subscribe();
+      if (!subRes.success && notificationService.getPermission() !== 'granted') {
+        setPushFeedback('Please allow notifications in your browser.');
+        setPushingAlert(false);
+        return;
+      }
+      const res = await notificationService.triggerTopPickPush();
+      if (res.status === 'success') {
+        setPushFeedback('🔔 Top pick alert pushed to your device!');
+      } else {
+        setPushFeedback('Could not send alert: ' + (res.error || 'Server error'));
+      }
+    } catch (e: any) {
+      setPushFeedback('Alert failed: ' + e.message);
+    } finally {
+      setPushingAlert(false);
+      setTimeout(() => setPushFeedback(null), 5000);
+    }
+  };
 
   const runPredictionForStock = async (stock: { symbol: string; exchange: string; name?: string }) => {
     setLoading(true);
@@ -105,11 +135,22 @@ function PredictionsContent() {
             'XGBoost': { price: Math.round(apiData.current_price * 1.024), pct: 2.4, conf: 82 },
             'SVR Model': { price: Math.round(apiData.current_price * 1.012), pct: 1.2, conf: 78 },
           },
-          signals: apiData.technical_signals || [
-            { ind: 'RSI (14)', val: '58.4', sig: 'Neutral Momentum', c: 'green' },
-            { ind: 'MACD (12,26)', val: '+12.5', sig: 'Bullish Crossover', c: 'green' },
-            { ind: 'EMA 20/50', val: 'Above', sig: 'Uptrend Intact', c: 'green' },
-          ],
+          signals: Array.isArray(apiData.technical_signals) && apiData.technical_signals.length > 0
+            ? apiData.technical_signals.map((s: any) => ({
+                ind: s.indicator || s.ind || 'Indicator',
+                val: s.value !== undefined ? String(s.value) : (s.val !== undefined ? String(s.val) : '—'),
+                sig: s.signal || s.sig || 'Neutral',
+                c: s.color === 'green' || s.c === 'green'
+                  ? 'green'
+                  : s.color === 'red' || s.c === 'red'
+                  ? 'red'
+                  : 'amber',
+              }))
+            : [
+                { ind: 'RSI (14)', val: '58.4', sig: 'Neutral Momentum', c: 'green' },
+                { ind: 'MACD (12,26)', val: '+12.5', sig: 'Bullish Crossover', c: 'green' },
+                { ind: 'EMA 20/50', val: 'Above', sig: 'Uptrend Intact', c: 'green' },
+              ],
         });
       } else {
         setError('No prediction data returned for this symbol.');
@@ -150,8 +191,58 @@ function PredictionsContent() {
   const d = data;
   const up = d && d.ensemble_change_pct >= 0;
 
+  if (isFree) {
+    return (
+      <div className="page" style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 720 }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', paddingTop: 8 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)',
+            borderRadius: 20, padding: '4px 12px', marginBottom: 12,
+          }}>
+            <Sparkles size={11} color="#A78BFA" />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#A78BFA', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Machine Learning
+            </span>
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-1)', marginBottom: 6 }}>AI Stock Prediction</h1>
+          <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Exclusive feature for Pro & Premium subscribers</p>
+        </div>
+
+        {/* Feature Lock Box */}
+        <ProFeatureLock featureName="AI Stock Predictions & Daily Picks" requiredPlan="pro" />
+      </div>
+    );
+  }
+
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 720 }}>
+
+      {/* Plan Active Header Pill */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '8px 14px', borderRadius: 10,
+        background: isPremium ? 'rgba(245,158,11,0.08)' : 'rgba(99,102,241,0.08)',
+        border: `1px solid ${isPremium ? 'rgba(245,158,11,0.25)' : 'rgba(99,102,241,0.25)'}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {isPremium ? <Crown size={14} color="#F59E0B" /> : <Zap size={14} color="var(--accent-light)" />}
+          <span style={{ fontSize: 12, fontWeight: 700, color: isPremium ? '#F59E0B' : 'var(--accent-light)' }}>
+            {isPremium ? 'Premium Plan Active • Unlimited AI Predictions' : 'Pro Plan Active • 50 AI Predictions / Day'}
+          </span>
+        </div>
+        <button
+          onClick={() => setPlan('free')}
+          style={{
+            fontSize: 11, fontWeight: 600, color: 'var(--text-3)',
+            background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline'
+          }}
+          title="Switch to Free to test lock view"
+        >
+          Test Free View
+        </button>
+      </div>
 
       {/* Header */}
       <div style={{ textAlign: 'center', paddingTop: 8 }}>
@@ -172,13 +263,43 @@ function PredictionsContent() {
       {/* Today's Recommended Purchases Bar */}
       {dailyPicks.length > 0 && (
         <div className="card" style={{ padding: '14px 16px', background: 'linear-gradient(135deg, rgba(168,85,247,0.08) 0%, rgba(99,102,241,0.04) 100%)', border: '1px solid rgba(168,85,247,0.2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Sparkles size={14} color="#a855f7" />
               <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Today's AI Stock Purchases</span>
             </div>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#a855f7' }}>CLICK TO RUN PREDICTION</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                type="button"
+                onClick={handlePushTopPick}
+                disabled={pushingAlert}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '4px 10px', borderRadius: 20,
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.25))',
+                  border: '1px solid rgba(168,85,247,0.4)',
+                  color: '#E0E7FF', fontSize: 11, fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >
+                <Bell size={12} color="#A78BFA" />
+                {pushingAlert ? 'Sending Push…' : 'Push Top Pick Alert'}
+              </button>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#a855f7' }}>CLICK TO RUN</span>
+            </div>
           </div>
+
+          {pushFeedback && (
+            <div style={{
+              padding: '6px 10px', borderRadius: 6, marginBottom: 10,
+              background: pushFeedback.includes('!') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)',
+              border: `1px solid ${pushFeedback.includes('!') ? 'rgba(34,197,94,0.25)' : 'rgba(244,63,94,0.25)'}`,
+              color: pushFeedback.includes('!') ? 'var(--green)' : 'var(--red)',
+              fontSize: 11, fontWeight: 600, textAlign: 'center'
+            }}>
+              {pushFeedback}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
             {dailyPicks.map((pick: any) => (
               <button
@@ -408,7 +529,7 @@ function PredictionsContent() {
           </div>
 
           {/* ML Models */}
-          <div className="card" style={{ overflow: 'hidden' }}>
+          {/* <div className="card" style={{ overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
               <h3 style={{ fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <BrainCircuit size={14} color="#A78BFA" /> ML Model Breakdown
@@ -422,14 +543,14 @@ function PredictionsContent() {
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{name}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
                   <span className="nums" style={{ fontSize: 12, fontWeight: 700 }}>₹{m?.price?.toLocaleString() || m?.price}</span>
-                  <span className="nums" style={{ fontSize: 11, fontWeight: 700, color: (m?.pct ?? 0) >= 0 ? 'var(--green)' : 'var(--red)', minWidth: 44, textAlign: 'right' }}>
-                    {(m?.pct ?? 0) >= 0 ? '+' : ''}{m?.pct ?? 0}%
+                  <span className="nums" style={{ fontSize: 11, fontWeight: 700, color: (m?.pct ?? m?.change_pct ?? 0) >= 0 ? 'var(--green)' : 'var(--red)', minWidth: 44, textAlign: 'right' }}>
+                    {(m?.pct ?? m?.change_pct ?? 0) >= 0 ? '+' : ''}{m?.pct ?? m?.change_pct ?? 0}%
                   </span>
                   <span className="nums" style={{ fontSize: 10, color: 'var(--text-3)', minWidth: 36, textAlign: 'right' }}>{m?.conf || m?.confidence}%</span>
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
 
           {/* Technical Signals */}
           <div className="card" style={{ overflow: 'hidden' }}>
@@ -438,24 +559,31 @@ function PredictionsContent() {
                 <Activity size={14} color="#06B6D4" /> Technical Signals
               </h3>
             </div>
-            {d.signals.map((s: any, i: number) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '11px 18px', borderBottom: '1px solid var(--border)', gap: 8,
-              }} className="last-no-border">
-                <span style={{ fontSize: 12, fontWeight: 600 }}>{s.ind}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span className="nums" style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.val}</span>
-                  <span className={s.c === 'green' ? 'badge-green' : s.c === 'red' ? 'badge-red' : 'badge-amber'}>
-                    {s.sig}
-                  </span>
+            {(d.signals || []).map((s: any, i: number) => {
+              const indName = s.ind || s.indicator || 'Signal';
+              const val = s.val !== undefined ? s.val : (s.value !== undefined ? String(s.value) : '—');
+              const sig = s.sig || s.signal || 'Neutral';
+              const color = s.c || s.color;
+              const badgeClass = color === 'green' ? 'badge-green' : color === 'red' ? 'badge-red' : 'badge-amber';
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '11px 18px', borderBottom: '1px solid var(--border)', gap: 8,
+                }} className="last-no-border">
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{indName}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="nums" style={{ fontSize: 11, color: 'var(--text-3)' }}>{val}</span>
+                    <span className={badgeClass}>
+                      {sig}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Disclaimer */}
-          <div className="card" style={{ padding: 16, background: 'rgba(244,63,94,0.05)', border: '1px solid rgba(244,63,94,0.15)' }}>
+          <div className="card" style={{ padding: 16, background: 'rgba(244,63,94,0.05)', border: '1px solid rgba(244,63,94,0.15)', marginBottom: 40 }}>
             <h3 style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
               <AlertTriangle size={13} /> Disclaimer
             </h3>
