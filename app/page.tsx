@@ -59,6 +59,19 @@ export default function Dashboard() {
   const token = useSelector((state: any) => state.auth.token);
 
   const [marketStatus, setMarketStatus] = useState("Closed");
+  const [marketInfo, setMarketInfo] = useState<{
+    isOpen: boolean;
+    status: string;
+    statusDetail: string;
+    openTime: string;
+    closeTime: string;
+  }>({
+    isOpen: false,
+    status: "Closed",
+    statusDetail: "Market closed · Opens at 09:15 AM IST",
+    openTime: "09:15 AM IST",
+    closeTime: "03:30 PM IST",
+  });
   const [tab, setTab] = useState<'gainers' | 'losers'>('gainers');
   const [topGainers, setTopGainers] = useState(gainers);
   const [topLosers, setTopLosers] = useState(losers);
@@ -122,11 +135,39 @@ export default function Dashboard() {
   const fetchMarketStatus = async () => {
     try {
       const res = await authService.marketStatus();
-      if (res?.data?.market_status?.[0]?.marketStatus) {
-        setMarketStatus(res.data.market_status[0].marketStatus);
+      const data = res?.data;
+      if (data) {
+        const rawStatus = data.status || data.market_status?.[0]?.marketStatus || 'Closed';
+        const isOpen = Boolean(data.is_open || rawStatus.toLowerCase() === 'open');
+        const status = isOpen ? 'Open' : 'Closed';
+        const statusDetail = data.status_detail || (isOpen ? 'Trading is live · Closes at 03:30 PM IST' : (data.schedule?.next_session_label || 'Market closed · Opens at 09:15 AM IST'));
+
+        setMarketStatus(status);
+        setMarketInfo({
+          isOpen,
+          status,
+          statusDetail,
+          openTime: data.schedule?.open_time || '09:15 AM IST',
+          closeTime: data.schedule?.close_time || '03:30 PM IST',
+        });
       }
     } catch (error) {
       console.error('Error fetching market status:', error);
+      // Fallback to local IST calculation
+      try {
+        const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const day = nowIST.getDay();
+        const mins = nowIST.getHours() * 60 + nowIST.getMinutes();
+        const isOpen = day >= 1 && day <= 5 && mins >= 555 && mins < 930;
+        setMarketStatus(isOpen ? 'Open' : 'Closed');
+        setMarketInfo({
+          isOpen,
+          status: isOpen ? 'Open' : 'Closed',
+          statusDetail: isOpen ? 'Trading session is active (09:15 - 15:30 IST)' : 'Market closed · Opens at 09:15 AM IST',
+          openTime: '09:15 AM IST',
+          closeTime: '03:30 PM IST',
+        });
+      } catch {}
     }
   };
 
@@ -448,51 +489,38 @@ export default function Dashboard() {
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'right' }}>
-          {(() => {
-            const now = new Date();
-            const day = now.getDay();
-            const hours = now.getHours();
-            const minutes = now.getMinutes();
-            const time = hours * 60 + minutes;
-
-            // Market Hours: 9:15 AM (555) to 3:30 PM (930)
-            const isOpen = day >= 1 && day <= 5 && time >= 555 && time <= 930;
-
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: marketStatus === "Open" ? 'var(--green-bg)' : 'var(--red-bg)',
-                  padding: '6px 12px',
-                  borderRadius: '99px',
-                  border: `1px solid ${marketStatus === "Open" ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}`
-                }}>
-                  <div style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: marketStatus === "Open" ? 'var(--green)' : 'var(--red)',
-                    boxShadow: `0 0 12px ${marketStatus == "Open" ? 'var(--green)' : 'var(--red)'}`,
-                    animation: 'pulse-dot 2s infinite'
-                  }} />
-                  <span style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: marketStatus == "Open" ? 'var(--green)' : 'var(--red)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}>
-                    Market {marketStatus != "Closed" ? 'Open' : 'Closed'}
-                  </span>
-                </div>
-                <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>
-                  {marketStatus != "Closed" ? 'Trading is live' : 'Next session: Mon 9:15 AM'}
-                </p>
-              </div>
-            );
-          })()}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: marketInfo.isOpen ? 'var(--green-bg)' : 'var(--red-bg)',
+              padding: '6px 14px',
+              borderRadius: '99px',
+              border: `1px solid ${marketInfo.isOpen ? 'rgba(16,185,129,0.25)' : 'rgba(244,63,94,0.25)'}`
+            }}>
+              <div style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: marketInfo.isOpen ? 'var(--green)' : 'var(--red)',
+                boxShadow: `0 0 12px ${marketInfo.isOpen ? 'var(--green)' : 'var(--red)'}`,
+                animation: marketInfo.isOpen ? 'pulse-dot 2s infinite' : 'none'
+              }} />
+              <span style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: marketInfo.isOpen ? 'var(--green)' : 'var(--red)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                Market {marketInfo.isOpen ? 'Open' : 'Closed'}
+              </span>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>
+              {marketInfo.statusDetail}
+            </p>
+          </div>
         </div>
       </div>
 
