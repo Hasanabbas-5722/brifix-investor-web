@@ -1,6 +1,6 @@
 /** Flask / Socket.IO host without trailing path (same as RN hard-coded host pattern). */
 export const API_ORIGIN = (
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:6001'
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://brifix-investor-backend.vercel.app/'
 ).replace(/\/$/, '');
 
 /** REST base for routes mirrored from `brifix_investors_frontend/src/api/AuthService.js`. */
