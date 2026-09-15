@@ -1,7 +1,7 @@
 'use client';
 
 import { Bell, Search, ChevronDown, Zap, Crown, Star } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -118,9 +118,6 @@ export default function TopBar() {
         <Image
           src="/brifix-logo.png"
           alt="Brifix Logo"
-          width={40}
-          height={40}
-          style={{ borderRadius: 8, objectFit: 'contain', width: 'auto', height: 'auto' }}
           width={40}
           height={40}
           style={{ borderRadius: 8, objectFit: 'contain', width: 'auto', height: 'auto' }}
