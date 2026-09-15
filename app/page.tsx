@@ -89,6 +89,20 @@ export default function Dashboard() {
     fetchTopMoves();
     fetchInitialIndexData();
     fetchDailyRecommendations();
+
+    // ── Continuous live market sync (every 3s for indices, 15s for gainers/losers) ──
+    const indexInterval = setInterval(() => {
+      fetchInitialIndexData();
+    }, 3000);
+
+    const movesInterval = setInterval(() => {
+      fetchTopMoves();
+    }, 15000);
+
+    return () => {
+      clearInterval(indexInterval);
+      clearInterval(movesInterval);
+    };
   }, []);
 
   const fetchInitialIndexData = async () => {

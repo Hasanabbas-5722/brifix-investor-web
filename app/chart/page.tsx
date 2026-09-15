@@ -429,7 +429,7 @@ function ChartComponent() {
     }
   }, [sym.label, sym.id, tf, candles, chartType]);
 
-  // Periodic fast background sync (every 5 seconds) to ensure prices stay fresh
+  // Periodic fast background sync (every 2.5 seconds) to ensure prices and chart stay fresh
   useEffect(() => {
     const timer = setInterval(async () => {
       try {
@@ -446,14 +446,31 @@ function ChartComponent() {
             chg: +chg.toFixed(2),
             chgPct: +chgPct.toFixed(2),
           }));
+
+          // Also update active candle in the chart series
+          if (mainSeries.current && candles.length > 0) {
+            const lastCandle = candles[candles.length - 1];
+            const updated = {
+              time: lastCandle.time as any,
+              open: lastCandle.open,
+              high: Math.max(lastCandle.high, ltp),
+              low: Math.min(lastCandle.low, ltp),
+              close: ltp,
+            };
+            try {
+              mainSeries.current.update(chartType === 'candles' ? updated : { time: updated.time, value: ltp });
+            } catch {
+              // ignore safe update errors
+            }
+          }
         }
       } catch {
         // silent background sync
       }
-    }, 5000);
+    }, 2500);
 
     return () => clearInterval(timer);
-  }, [sym.label, tf]);
+  }, [sym.label, tf, candles, chartType]);
 
   /* ── 3. Build & Render Lightweight Charts ─ */
   useEffect(() => {
