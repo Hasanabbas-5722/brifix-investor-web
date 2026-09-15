@@ -349,14 +349,20 @@ function ChartComponent() {
     return () => { active = false; };
   }, [sym.label, tf, buildKey]);
 
+  const candlesRef = useRef<ChartCandle[]>([]);
+  candlesRef.current = candles;
+  const chartTypeRef = useRef<ChartType>(chartType);
+  chartTypeRef.current = chartType;
+
   /* ── 2. Real-Time WebSocket & Polling Tick Updates ── */
   useEffect(() => {
     const socketService = SocketService.getInstance();
     const socket = socketService.connect();
 
     if (socket) {
-      socketService.subscribeToChart({ symbol: sym.label, interval: tf, period: '' });
-      socketService.subscribeToIndexes({ tokens: [sym.label, 'Nifty 50', 'Nifty Bank'] });
+      socketService.subscribeToChart({ symbol: sym.id, interval: tf, period: '' });
+      socketService.subscribeToStockPrice({ symbol: sym.id, token: sym.id });
+      socketService.subscribeToIndexes({ tokens: [sym.label, sym.id, 'Nifty 50', 'Nifty Bank'] });
 
       const handleIndexTick = (data: any) => {
         if (!data) return;
@@ -367,6 +373,7 @@ function ChartComponent() {
         const match =
           symName === currentSym ||
           symName === currentId ||
+          (data.token && (data.token.toUpperCase() === currentId || data.token.toUpperCase() === currentSym)) ||
           (currentSym.includes('NIFTY 50') && data.token === '99926000') ||
           (currentSym.includes('BANK NIFTY') && data.token === '99926009') ||
           (currentSym.includes('FIN NIFTY') && data.token === '99926037') ||
@@ -375,9 +382,9 @@ function ChartComponent() {
         if (match && data.ltp) {
           const livePrice = Number(data.ltp);
           setOhlc(prev => {
-            const chg = prev.c > 0 ? +(livePrice - (prev.c - prev.chg)).toFixed(2) : prev.chg;
+            const chg = prev.c > 0 ? +(livePrice - (prev.c - prev.chg)).toFixed(2) : (data.change ?? prev.chg);
             const prevClose = prev.c - prev.chg;
-            const chgPct = prevClose > 0 ? +((chg / prevClose) * 100).toFixed(2) : prev.chgPct;
+            const chgPct = prevClose > 0 ? +((chg / prevClose) * 100).toFixed(2) : (data.pChange ?? prev.chgPct);
             return {
               ...prev,
               c: livePrice,
@@ -389,8 +396,9 @@ function ChartComponent() {
           });
 
           // Update active candlestick directly in lightweight-charts for 0-latency feedback
-          if (mainSeries.current && candles.length > 0) {
-            const lastCandle = candles[candles.length - 1];
+          const activeCandles = candlesRef.current;
+          if (mainSeries.current && activeCandles.length > 0) {
+            const lastCandle = activeCandles[activeCandles.length - 1];
             const updated = {
               time: lastCandle.time as any,
               open: lastCandle.open,
@@ -399,7 +407,7 @@ function ChartComponent() {
               close: livePrice,
             };
             try {
-              mainSeries.current.update(chartType === 'candles' ? updated : { time: updated.time, value: livePrice });
+              mainSeries.current.update(chartTypeRef.current === 'candles' ? updated : { time: updated.time, value: livePrice });
             } catch {
               // ignore safe update errors
             }
@@ -408,26 +416,47 @@ function ChartComponent() {
       };
 
       socket.on('indexes_data', handleIndexTick);
+      socket.on('stock_price', handleIndexTick);
       socket.on('chart_data', (payload: any) => {
         if (payload?.candle) {
           const c = payload.candle;
+          const livePrice = Number(c.close || payload.currentPrice || 0);
           setOhlc(prev => ({
             ...prev,
-            c: c.close,
-            h: Math.max(prev.h, c.high),
-            l: prev.l > 0 ? Math.min(prev.l, c.low) : c.low,
-            vol: c.volume,
+            c: livePrice > 0 ? livePrice : prev.c,
+            h: Math.max(prev.h, Number(c.high || livePrice)),
+            l: prev.l > 0 ? Math.min(prev.l, Number(c.low || livePrice)) : livePrice,
+            vol: c.volume ?? prev.vol,
           }));
+
+          const activeCandles = candlesRef.current;
+          if (mainSeries.current && activeCandles.length > 0) {
+            const lastCandle = activeCandles[activeCandles.length - 1];
+            const candleTime = c.time > 1e11 ? Math.floor(c.time / 1000) : (c.time || lastCandle.time);
+            const updated = {
+              time: candleTime as any,
+              open: Number(c.open || lastCandle.open),
+              high: Number(c.high || Math.max(lastCandle.high, livePrice)),
+              low: Number(c.low || Math.min(lastCandle.low, livePrice)),
+              close: livePrice,
+            };
+            try {
+              mainSeries.current.update(chartTypeRef.current === 'candles' ? updated : { time: updated.time, value: livePrice });
+            } catch {
+              // ignore
+            }
+          }
         }
       });
 
       return () => {
         socket.off('indexes_data', handleIndexTick);
+        socket.off('stock_price', handleIndexTick);
         socket.off('chart_data');
         socketService.unsubscribeFromChart();
       };
     }
-  }, [sym.label, sym.id, tf, candles, chartType]);
+  }, [sym.label, sym.id, tf]);
 
   // Periodic fast background sync (every 2.5 seconds) to ensure prices and chart stay fresh
   useEffect(() => {
@@ -806,7 +835,7 @@ function ChartComponent() {
       >
         {/* Quick Index Pills */}
         <div
-          className="no-scrollbar"
+          className="no-scrollbar hidden md:flex"
           style={{
             display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
             overflowX: 'auto',
@@ -841,7 +870,7 @@ function ChartComponent() {
         </div>
 
         {/* Divider */}
-        <div style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0 }} />
+        <div className="hidden md:block" style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0 }} />
 
         {/* Searchable Symbol Selector */}
         <div style={{ position: 'relative', flexShrink: 0, zIndex: symOpen ? 220 : 30 }}>
@@ -1069,11 +1098,14 @@ function ChartComponent() {
         </div>
 
         {/* Live Feed Pill */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
-          borderRadius: 20, padding: '3px 9px', flexShrink: 0, marginLeft: 'auto',
-        }}>
+        <div
+          className="hidden sm:flex"
+          style={{
+            alignItems: 'center', gap: 5,
+            background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
+            borderRadius: 20, padding: '3px 9px', flexShrink: 0, marginLeft: 'auto',
+          }}
+        >
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', animation: 'pulse-dot 2s infinite' }} />
           <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--green)' }}>LIVE MARKET</span>
         </div>

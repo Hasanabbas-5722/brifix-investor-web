@@ -222,6 +222,7 @@ function PredictionsContent() {
       {/* Plan Active Header Pill */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 8,
         padding: '8px 14px', borderRadius: 10,
         background: isPremium ? 'rgba(245,158,11,0.08)' : 'rgba(99,102,241,0.08)',
         border: `1px solid ${isPremium ? 'rgba(245,158,11,0.25)' : 'rgba(99,102,241,0.25)'}`,

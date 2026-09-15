@@ -45,4 +45,18 @@ export const authService = {
   growwUserProfile: () => apiClient.get(API_ENDPOINTS.GROWW_PROFILE),
   growwOrderList: () => apiClient.get(API_ENDPOINTS.GROWW_ORDER_LIST),
   marketStatus: () => apiClient.get(API_ENDPOINTS.MARKET_STATUS),
+  // Broker Account Integration
+  connectBroker: (payload: { broker: string; credentials?: Record<string, string> }) =>
+    apiClient.post(API_ENDPOINTS.BROKER_CONNECT, payload),
+  getBrokerStatus: () => apiClient.get(API_ENDPOINTS.BROKER_STATUS),
+  disconnectBroker: () => apiClient.post(API_ENDPOINTS.BROKER_DISCONNECT, {}),
+  // Automated Trading
+  toggleAutoTrade: (enabled: boolean) =>
+    apiClient.post(API_ENDPOINTS.AUTOTRADE_TOGGLE, { enabled }),
+  getAutoTradeConfig: () => apiClient.get(API_ENDPOINTS.AUTOTRADE_CONFIG),
+  updateAutoTradeConfig: (payload: unknown) =>
+    apiClient.post(API_ENDPOINTS.AUTOTRADE_CONFIG, payload),
+  getAutoTradePositions: () => apiClient.get(API_ENDPOINTS.AUTOTRADE_POSITIONS),
+  getAutoTradeHistory: () => apiClient.get(API_ENDPOINTS.AUTOTRADE_HISTORY),
+  emergencyExitAutoTrade: () => apiClient.post(API_ENDPOINTS.AUTOTRADE_EMERGENCY_EXIT, {}),
 };

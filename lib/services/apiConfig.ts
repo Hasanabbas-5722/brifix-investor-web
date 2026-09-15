@@ -1,17 +1,38 @@
-/** Flask / Socket.IO host without trailing path (same as RN hard-coded host pattern). */
-export const API_ORIGIN = (
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://brifix-investor-backend.vercel.app/'
-).replace(/\/$/, '');
+function getDefaultApiOrigin(): string {
+  if (process.env.NEXT_PUBLIC_API_ORIGIN) {
+    return process.env.NEXT_PUBLIC_API_ORIGIN.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host.startsWith('192.168.') ||
+      host.startsWith('10.')
+    ) {
+      return `http://${host}:6001`;
+    }
+  }
+  return 'http://localhost:6001';
+}
 
-/** REST base for routes mirrored from `brifix_investors_frontend/src/api/AuthService.js`. */
+function getDefaultSocketUrl(): string {
+  if (process.env.NEXT_PUBLIC_SOCKET_URL) {
+    return process.env.NEXT_PUBLIC_SOCKET_URL.replace(/\/$/, '');
+  }
+  return getDefaultApiOrigin();
+}
+
+/** Flask / Socket.IO host without trailing path. */
+export const API_ORIGIN = getDefaultApiOrigin();
+
+/** REST base for routes. */
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? `${API_ORIGIN}/api/v1`
 ).replace(/\/$/, '');
 
-/** Socket.IO server URL (defaults to same origin as REST). */
-export const SOCKET_URL = (
-  process.env.NEXT_PUBLIC_SOCKET_URL ?? API_ORIGIN
-).replace(/\/$/, '');
+/** Socket.IO server URL. */
+export const SOCKET_URL = getDefaultSocketUrl();
 
 /** Mounted at app root in Flask, not under `/api/v1`. */
 export const CHART_DATA_URL = `${API_ORIGIN}/chart-data`;
@@ -55,4 +76,12 @@ export const API_ENDPOINTS = {
   GROWW_PROFILE: '/groww/groww_user_profile',
   GROWW_ORDER_LIST: '/groww/getOrderList',
   MARKET_STATUS: '/market_status',
+  BROKER_CONNECT: '/broker/connect',
+  BROKER_STATUS: '/broker/status',
+  BROKER_DISCONNECT: '/broker/disconnect',
+  AUTOTRADE_TOGGLE: '/autotrade/toggle',
+  AUTOTRADE_CONFIG: '/autotrade/config',
+  AUTOTRADE_POSITIONS: '/autotrade/positions',
+  AUTOTRADE_HISTORY: '/autotrade/history',
+  AUTOTRADE_EMERGENCY_EXIT: '/autotrade/emergency_exit',
 };

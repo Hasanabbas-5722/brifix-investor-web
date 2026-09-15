@@ -50,6 +50,9 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
 }
 
 body {
@@ -58,6 +61,9 @@ body {
   font-family: var(--font-geist-sans), 'Inter', system-ui, sans-serif;
   line-height: 1.6;
   min-height: 100dvh;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
 }
 
 /* ── Layout shell ────────────────────────── */
@@ -68,6 +74,9 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 @media (min-width: 1024px) {
@@ -75,6 +84,46 @@ body {
     margin-left: var(--sidebar-w);
   }
 }
+
+/* ── Desktop fixed sidebar ───────────────── */
+.desktop-sidebar {
+  display: none !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  z-index: 50;
+  flex-direction: column;
+  align-items: center;
+}
+@media (min-width: 1024px) {
+  .desktop-sidebar {
+    display: flex !important;
+  }
+}
+
+/* ── Topbar responsive elements ──────────── */
+.topbar-market-badge {
+  display: none !important;
+}
+@media (min-width: 640px) {
+  .topbar-market-badge {
+    display: flex !important;
+  }
+}
+
+.topbar-plan-badge {
+  display: none !important;
+}
+@media (min-width: 480px) {
+  .topbar-plan-badge {
+    display: flex !important;
+  }
+}
+
 
 /* ── Card ────────────────────────────────── */
 .card {
@@ -204,9 +253,17 @@ body {
 
 /* ── Page wrapper ────────────────────────── */
 .page {
-  padding: 24px 20px calc(88px + env(safe-area-inset-bottom, 0px));
+  padding: 18px 12px calc(88px + env(safe-area-inset-bottom, 0px));
   max-width: 1100px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
   margin: 0 auto;
+}
+@media (min-width: 640px) {
+  .page {
+    padding: 24px 20px calc(88px + env(safe-area-inset-bottom, 0px));
+  }
 }
 @media (min-width: 1024px) {
   .page {
@@ -228,12 +285,16 @@ body {
 @media (max-width: 639px) {
   .grid-2-sm { grid-template-columns: repeat(2, 1fr) !important; }
 }
+@media (min-width: 640px) {
+  .grid-4-sm { grid-template-columns: repeat(4, 1fr) !important; }
+}
 @media (min-width: 1024px) {
   .grid-4-lg { grid-template-columns: repeat(4, 1fr) !important; }
 }
 @media (min-width: 768px) {
   .grid-3-md { grid-template-columns: repeat(3, 1fr) !important; }
   .grid-2-md { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid-4-md { grid-template-columns: repeat(4, 1fr) !important; }
 }
 
 /* ── Spinner ─────────────────────────────── */
@@ -254,3 +315,95 @@ body {
 @media (min-width: 1024px) {
   .hidden-desktop { display: none !important; }
 }
+
+/* ── Responsive greeting banner ──────────── */
+/* Side-by-side on md+, stacks to column on mobile */
+.greeting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+@media (max-width: 639px) {
+  .greeting-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .greeting-row > *:last-child {
+    width: 100%;
+  }
+}
+
+/* ── Section header row (title + link) ───── */
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* ── Flex row that becomes column on mobile ─ */
+.flex-row-mobile-col {
+  display: flex;
+  gap: 12px;
+}
+@media (max-width: 767px) {
+  .flex-row-mobile-col {
+    flex-direction: column;
+  }
+}
+
+/* ── Two-col grid that collapses to 1-col ─── */
+.grid-2-to-1 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (max-width: 479px) {
+  .grid-2-to-1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── TopBar horizontal padding ───────────── */
+@media (max-width: 639px) {
+  .topbar-pad { padding-left: 12px !important; padding-right: 12px !important; }
+}
+
+/* ── Auth page outer wrapper ─────────────── */
+.auth-outer {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--bg);
+}
+
+/* ── Register form two-col grid ──────────── */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 479px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Plan selector three-col grid ────────── */
+.plan-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 479px) {
+  .plan-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+

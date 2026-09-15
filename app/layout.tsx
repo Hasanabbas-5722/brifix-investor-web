@@ -5,6 +5,7 @@ import AuthGuard from "./components/AuthGuard";
 
 import ReduxProvider from "./components/ReduxProvider";
 import { PlanProvider } from "@/lib/context/PlanContext";
+import { SidebarProvider } from "@/lib/context/SidebarContext";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -20,9 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ReduxProvider>
           <PlanProvider>
-            <AuthGuard>
-              {children}
-            </AuthGuard>
+            <SidebarProvider>
+              <AuthGuard>
+                {children}
+              </AuthGuard>
+            </SidebarProvider>
           </PlanProvider>
         </ReduxProvider>
       </body>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, ChevronDown, Zap, Crown, Star } from 'lucide-react';
+import { Bell, Search, ChevronDown, Zap, Crown, Star, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -8,11 +8,13 @@ import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import NotificationModal from './NotificationModal';
 import { usePlan } from '@/lib/context/PlanContext';
+import { useSidebar } from '@/lib/context/SidebarContext';
 import { authService } from '@/lib/services/authService';
 
 export default function TopBar() {
   const router = useRouter();
   const { plan, isPro, isPremium } = usePlan();
+  const { toggleSidebar } = useSidebar();
   const reduxUser = useSelector((state: any) => state.auth?.user);
   const [user, setUser] = useState<any>(reduxUser);
 
@@ -87,11 +89,15 @@ export default function TopBar() {
 
   return (
     <header
+      className="topbar-pad"
       style={{
         position: 'sticky',
         top: 0,
         zIndex: 40,
         height: 64,
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box',
         flexShrink: 0,
         background: 'rgba(15,21,32,0.85)',
         backdropFilter: 'blur(20px)',
@@ -100,9 +106,34 @@ export default function TopBar() {
         display: 'flex',
         alignItems: 'center',
         padding: '0 20px',
-        gap: 12,
+        gap: 10,
       }}
     >
+      {/* 3-lines Hamburger Menu Button (Mobile & Tablet) */}
+      <button
+        type="button"
+        onClick={toggleSidebar}
+        className="lg:hidden"
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 10,
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          color: 'var(--text-1)',
+          flexShrink: 0,
+          padding: 0,
+        }}
+        aria-label="Open navigation menu"
+        title="Open menu"
+      >
+        <Menu size={20} />
+      </button>
+
       {/* Mobile logo */}
       <Link
         href="/"
@@ -113,20 +144,21 @@ export default function TopBar() {
           gap: 8,
           flexShrink: 0,
           marginRight: 4,
+          textDecoration: 'none',
         }}
       >
         <Image
           src="/brifix-logo.png"
           alt="Brifix Logo"
-          width={40}
-          height={40}
+          width={36}
+          height={36}
           style={{ borderRadius: 8, objectFit: 'contain', width: 'auto', height: 'auto' }}
         />
-        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>Brifix</span>
+        <span className="hidden sm:inline" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>Brifix</span>
       </Link>
 
       {/* Search */}
-      <div style={{ flex: 1, maxWidth: 400 }}>
+      <div style={{ flex: 1, maxWidth: 400, minWidth: 0 }}>
         <div
           style={{
             display: 'flex',
@@ -143,7 +175,7 @@ export default function TopBar() {
           <Search size={15} color="var(--text-3)" style={{ flexShrink: 0 }} />
           <input
             type="text"
-            placeholder="Search stocks, indices, news…"
+            placeholder="Search stocks, indices…"
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             style={{
@@ -153,6 +185,7 @@ export default function TopBar() {
               color: 'var(--text-1)',
               fontSize: 13,
               width: '100%',
+              minWidth: 0,
             }}
           />
         </div>
@@ -163,8 +196,8 @@ export default function TopBar() {
         {/* Live / Closed badge */}
         <div
           title={marketStatus.detail}
+          className="topbar-market-badge"
           style={{
-            display: 'flex',
             alignItems: 'center',
             gap: 6,
             background: marketStatus.isOpen ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
@@ -173,7 +206,6 @@ export default function TopBar() {
             padding: '3px 10px',
             cursor: 'default',
           }}
-          className="hidden sm:flex"
         >
           <span
             style={{
@@ -196,11 +228,11 @@ export default function TopBar() {
           </span>
         </div>
 
-        {/* Plan Badge */}
+        {/* Plan Badge — hidden on xs screens */}
         <Link
           href="/pricing"
+          className="topbar-plan-badge"
           style={{
-            display: 'flex',
             alignItems: 'center',
             gap: 5,
             background: isPremium ? 'rgba(245,158,11,0.12)' : isPro ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.05)',

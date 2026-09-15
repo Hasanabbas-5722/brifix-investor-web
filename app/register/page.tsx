@@ -189,7 +189,7 @@ export default function Register() {
         style={{
           width: '100%',
           maxWidth: '560px',
-          padding: '36px',
+          padding: 'clamp(20px, 5vw, 36px)',
           background: 'rgba(15, 21, 32, 0.85)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255, 255, 255, 0.07)',
@@ -269,8 +269,8 @@ export default function Register() {
         )}
 
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Two-column grid for Name & Username */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          {/* Two-column grid for Name & Username (stacks on mobile) */}
+          <div className="form-grid-2">
             <div>
               <label
                 className="label"
@@ -370,8 +370,8 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Two-column grid for Email & Mobile */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '14px' }}>
+          {/* Two-column grid for Email & Mobile (stacks on mobile) */}
+          <div className="form-grid-2">
             <div>
               <label
                 className="label"
@@ -471,8 +471,8 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Passwords grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          {/* Passwords grid (stacks on mobile) */}
+          <div className="form-grid-2">
             <div>
               <label
                 className="label"
@@ -632,7 +632,7 @@ export default function Register() {
             >
               Choose Initial Plan
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <div className="plan-grid-3">
               {PLAN_OPTIONS.map((p) => {
                 const isSelected = selectedPlan === p.id;
                 const IconComponent = p.icon;

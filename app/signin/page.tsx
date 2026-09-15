@@ -76,7 +76,7 @@ console.log(Date.now());
       alignItems: 'center',
       justifyContent: 'center',
       background: 'radial-gradient(circle at 10% 20%, #111827 0%, #030712 100%)',
-      padding: '24px',
+      padding: '16px',
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -105,9 +105,10 @@ console.log(Date.now());
       <div className="card fade-up" style={{
         width: '100%',
         maxWidth: '440px',
-        padding: '40px',
+        padding: 'clamp(24px, 5vw, 40px)',
         background: 'rgba(15, 21, 32, 0.7)',
         backdropFilter: 'blur(20px)',
+
         border: '1px solid rgba(255, 255, 255, 0.05)',
         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
         borderRadius: '24px',

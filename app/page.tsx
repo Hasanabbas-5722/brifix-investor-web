@@ -402,9 +402,22 @@ export default function Dashboard() {
         }
       });
 
+      socket.on('losers_data', (data: any) => {
+        if (Array.isArray(data)) {
+          const mapped = data.slice(0, 5).map((item: any) => ({
+            sym: item.symbol,
+            name: item.companyName || item.symbol,
+            price: `₹${item.ltp?.toLocaleString('en-IN') || '0'}`,
+            chg: `${item.pChange?.toFixed(2) || '0'}%`
+          }));
+          setTopLosers(mapped);
+        }
+      });
+
       return () => {
         socket.off('indexes_data');
         socket.off('gainers_data');
+        socket.off('losers_data');
       };
     }
   }, [socket, isConnected, subscribeToIndexes, token]);
@@ -455,10 +468,7 @@ export default function Dashboard() {
     <div className="page" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
       {/* ── Dynamic Market Status Header ─────────────────── */}
-      <div className="fade-in" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
+      <div className="greeting-row fade-in" style={{
         background: 'rgba(255,255,255,0.02)',
         padding: '20px 24px',
         borderRadius: 'var(--r-xl)',
@@ -478,9 +488,9 @@ export default function Dashboard() {
           pointerEvents: 'none'
         }} />
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <h1 className="gradient-text" style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.02em' }}>
+        <div style={{ position: 'relative', zIndex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+            <h1 className="gradient-text" style={{ fontSize: 'clamp(20px, 5vw, 26px)', fontWeight: 900, letterSpacing: '-0.02em' }}>
               {(() => {
                 const hour = new Date().getHours();
                 if (hour < 12) return 'Good Morning';
@@ -490,20 +500,20 @@ export default function Dashboard() {
             </h1>
             <span style={{ fontSize: 24 }}>👋</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <p style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Clock size={14} style={{ opacity: 0.7 }} />
               {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
-            <div style={{ width: 1, height: 12, background: 'var(--border)' }} />
+            <div style={{ width: 1, height: 12, background: 'var(--border)' }} className="hidden-mobile" />
             <p style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>
               {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
             </p>
           </div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'right' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -568,13 +578,14 @@ export default function Dashboard() {
 
         {/* ── Market indices ───────────────── */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div className="section-header">
             <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>Market Indices</h2>
-            <Link href="/chart" style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 12, color: 'var(--accent-light)', fontWeight: 600 }}>
+            <Link href="/chart" style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 12, color: 'var(--accent-light)', fontWeight: 600, flexShrink: 0 }}>
               View all <ChevronRight size={13} />
             </Link>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, width: '100%' }}
             className="grid-4-lg">
             {indices && indices.map((idx, i) => {
               // console.log("idx", idx, i)
@@ -596,7 +607,9 @@ export default function Dashboard() {
                   }}
                   className={`card card-hover fade-up d${i + 1}`}
                   style={{
-                    padding: '16px 18px',
+                    padding: '14px 14px',
+                    minWidth: 0,
+                    overflow: 'hidden',
                     textAlign: 'left',
                     cursor: 'pointer',
                     background: 'transparent',
@@ -637,8 +650,9 @@ export default function Dashboard() {
 
 
       {/* ── Quick actions ────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}
-        className="grid-2-sm">
+      {/* grid-2-sm = 2 col on <640px | grid-4-md = 4 col on 768px+ */}
+      <div style={{ display: 'grid', gap: 12 }}
+        className="grid-2-sm grid-4-md">
         {quickActions.map(({ label, Icon, href, from, to }) => (
           <Link key={label} href={href} style={{ textDecoration: 'none' }}>
             <div className="card card-hover fade-up" style={{
@@ -662,10 +676,10 @@ export default function Dashboard() {
 
       {/* ── Today's AI Stock Recommendations ── */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+        <div className="section-header">
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: 'clamp(14px, 4vw, 16px)', fontWeight: 800, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
                 <Sparkles size={18} color="#a855f7" /> Today's AI Stock Recommendations
               </h2>
               <span style={{
@@ -673,6 +687,7 @@ export default function Dashboard() {
                 background: 'linear-gradient(135deg, rgba(168,85,247,0.2) 0%, rgba(99,102,241,0.2) 100%)',
                 color: '#c084fc', padding: '3px 8px', borderRadius: 99,
                 border: '1px solid rgba(168,85,247,0.3)',
+                flexShrink: 0,
               }}>
                 BUY SIGNALS
               </span>
@@ -681,15 +696,16 @@ export default function Dashboard() {
               Algorithmic high-probability trade setups scored for today's market session
             </p>
           </div>
-          <Link href="/predictions" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent-light)', fontWeight: 600 }}>
+          <Link href="/predictions" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent-light)', fontWeight: 600, flexShrink: 0 }}>
             Deep Prediction AI <ChevronRight size={13} />
           </Link>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 270px), 1fr))', gap: 14, width: '100%' }}>
           {loadingPicks ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="card" style={{ padding: 20, minHeight: 180, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div key={i} className="card" style={{ padding: 16, minHeight: 180, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ width: '50%', height: 16, background: 'var(--bg-elevated)', borderRadius: 6 }} />
                 <div style={{ width: '80%', height: 28, background: 'var(--bg-elevated)', borderRadius: 6 }} />
                 <div style={{ width: '100%', height: 40, background: 'var(--bg-elevated)', borderRadius: 6, marginTop: 'auto' }} />
@@ -701,54 +717,56 @@ export default function Dashboard() {
                 key={pick.symbol}
                 className="card card-hover fade-up"
                 style={{
-                  padding: '20px 20px',
+                  padding: '16px 16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 14,
+                  gap: 12,
                   border: '1px solid rgba(168,85,247,0.25)',
                   background: 'linear-gradient(180deg, rgba(168,85,247,0.04) 0%, var(--bg-card) 100%)',
                   position: 'relative',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  width: '100%',
+                  boxSizing: 'border-box',
                 }}
               >
                 {/* Header with signal and confidence */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <span style={{
                       fontSize: 10,
                       fontWeight: 800,
                       color: pick.signal === 'STRONG BUY' ? 'var(--green)' : '#38bdf8',
                       background: pick.signal === 'STRONG BUY' ? 'var(--green-bg)' : 'rgba(56,189,248,0.15)',
-                      padding: '3px 8px',
+                      padding: '3px 7px',
                       borderRadius: 6,
                       letterSpacing: '0.04em'
                     }}>
                       {pick.signal}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 8 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
                       {pick.sector}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>
-                    <Target size={13} /> {pick.confidence}% AI Conf
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--green)' }}>
+                    <Target size={12} /> {pick.confidence}% AI Conf
                   </div>
                 </div>
 
                 {/* Stock symbol and price */}
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <div>
-                    <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-1)', margin: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-1)', margin: 0, wordBreak: 'break-word' }}>
                       {pick.symbol}
                     </h3>
-                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2, marginBottom: 0 }}>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2, marginBottom: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pick.name}
                     </p>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p className="nums" style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <p className="nums" style={{ fontSize: 17, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>
                       ₹{pick.current_price?.toLocaleString('en-IN')}
                     </p>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>CMP</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>CMP</span>
                   </div>
                 </div>
 
@@ -756,27 +774,29 @@ export default function Dashboard() {
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: 8,
+                  gap: 4,
                   background: 'var(--bg-elevated)',
-                  padding: '10px 12px',
+                  padding: '8px 10px',
                   borderRadius: 10,
-                  fontSize: 11
+                  fontSize: 11,
+                  width: '100%',
+                  boxSizing: 'border-box',
                 }}>
-                  <div>
-                    <span style={{ color: 'var(--text-3)', display: 'block' }}>1D Target</span>
-                    <span className="nums" style={{ fontWeight: 700, color: 'var(--green)' }}>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <span style={{ color: 'var(--text-3)', display: 'block', fontSize: 10 }}>1D Target</span>
+                    <span className="nums" style={{ fontWeight: 700, color: 'var(--green)', fontSize: 11, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       ₹{pick.target_1d?.toLocaleString('en-IN')}
                     </span>
                   </div>
-                  <div>
-                    <span style={{ color: 'var(--text-3)', display: 'block' }}>5D Target</span>
-                    <span className="nums" style={{ fontWeight: 700, color: 'var(--green)' }}>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <span style={{ color: 'var(--text-3)', display: 'block', fontSize: 10 }}>5D Target</span>
+                    <span className="nums" style={{ fontWeight: 700, color: 'var(--green)', fontSize: 11, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       ₹{pick.target_5d?.toLocaleString('en-IN')}
                     </span>
                   </div>
-                  <div>
-                    <span style={{ color: 'var(--text-3)', display: 'block' }}>Stop Loss</span>
-                    <span className="nums" style={{ fontWeight: 700, color: 'var(--red)' }}>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <span style={{ color: 'var(--text-3)', display: 'block', fontSize: 10 }}>Stop Loss</span>
+                    <span className="nums" style={{ fontWeight: 700, color: 'var(--red)', fontSize: 11, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       ₹{pick.stop_loss?.toLocaleString('en-IN')}
                     </span>
                   </div>

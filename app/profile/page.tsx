@@ -130,7 +130,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 12 }}>
         {[
           { value: '₹1.2Cr', label: 'Portfolio',   color: 'var(--text-1)' },
           { value: '14.9%',  label: 'Returns',     color: 'var(--green)' },
