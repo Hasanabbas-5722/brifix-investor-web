@@ -59,4 +59,5 @@ export const authService = {
   getAutoTradePositions: () => apiClient.get(API_ENDPOINTS.AUTOTRADE_POSITIONS),
   getAutoTradeHistory: () => apiClient.get(API_ENDPOINTS.AUTOTRADE_HISTORY),
   emergencyExitAutoTrade: () => apiClient.post(API_ENDPOINTS.AUTOTRADE_EMERGENCY_EXIT, {}),
+  scanAndExecuteAutoTrade: () => apiClient.post(API_ENDPOINTS.AUTOTRADE_SCAN, {}),
 };

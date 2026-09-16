@@ -84,4 +84,5 @@ export const API_ENDPOINTS = {
   AUTOTRADE_POSITIONS: '/autotrade/positions',
   AUTOTRADE_HISTORY: '/autotrade/history',
   AUTOTRADE_EMERGENCY_EXIT: '/autotrade/emergency_exit',
+  AUTOTRADE_SCAN: '/autotrade/scan',
 };

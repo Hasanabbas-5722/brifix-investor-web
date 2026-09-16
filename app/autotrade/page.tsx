@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   Cpu, Power, ShieldAlert, CheckCircle2, RefreshCw, AlertOctagon,
   Building2, ArrowUpRight, ArrowDownRight, TrendingUp, DollarSign,
-  Sliders, Lock, Info, Activity, History, Play, Pause, Layers
+  Sliders, Lock, Info, Activity, History, Play, Pause, Layers, Zap, Sparkles
 } from 'lucide-react';
 import { authService } from '@/lib/services/authService';
 import BrokerConnectModal from '../components/BrokerConnectModal';
@@ -13,6 +13,7 @@ export default function AutoTradePage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   const [brokerInfo, setBrokerInfo] = useState<any>({
@@ -101,11 +102,21 @@ export default function AutoTradePage() {
     setToggling(true);
     try {
       const newStatus = !config.enabled;
+      if (newStatus) {
+        setStatusMsg('Activating AI Auto-Trader: Predicting Indian stocks for >80% confidence setups...');
+      }
       const res = await authService.toggleAutoTrade(newStatus);
       if (res.data?.status === 'success') {
         setConfig(prev => ({ ...prev, enabled: res.data.enabled }));
-        setStatusMsg(res.data.message);
-        setTimeout(() => setStatusMsg(''), 3000);
+        const evalRes = res.data.eval_result || {};
+        const qualified = evalRes.qualified_picks || [];
+        if (newStatus && qualified.length > 0) {
+          const names = qualified.map((q: any) => `${q.symbol} (${q.confidence}%)`).join(', ');
+          setStatusMsg(`Auto-Trader Activated! AI Selected (>80%): ${names}. Placed ${evalRes.new_positions?.length || 0} automated trades.`);
+        } else {
+          setStatusMsg(res.data.message);
+        }
+        setTimeout(() => setStatusMsg(''), 6000);
         await Promise.all([loadPositions(), loadBrokerStatus(), loadHistory()]);
         setTimeout(() => { loadPositions(); loadBrokerStatus(); }, 1500);
       }
@@ -113,6 +124,35 @@ export default function AutoTradePage() {
       alert(err?.response?.data?.error || 'Failed to toggle automated trading');
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleScanAndTrade = async () => {
+    setScanning(true);
+    setStatusMsg('Scanning top Indian stocks with AI prediction models (>80% confidence)...');
+    try {
+      const res = await authService.scanAndExecuteAutoTrade();
+      if (res.data?.status === 'success') {
+        const result = res.data.result || {};
+        const newPositions = result.new_positions || [];
+        const qualified = result.qualified_picks || [];
+        
+        let msg = res.data.message;
+        if (qualified.length > 0) {
+          const names = qualified.map((q: any) => `${q.symbol} (${q.confidence}%)`).join(', ');
+          msg = `AI Qualified (>80%): ${names}. Placed ${newPositions.length} automated positions.`;
+        }
+        setStatusMsg(msg);
+        setTimeout(() => setStatusMsg(''), 6000);
+        await Promise.all([loadPositions(), loadBrokerStatus(), loadHistory()]);
+      } else {
+        setStatusMsg(res.data?.message || 'Scan completed.');
+        setTimeout(() => setStatusMsg(''), 4000);
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.error || err?.message || 'Scan failed');
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -217,6 +257,24 @@ export default function AutoTradePage() {
             {config.enabled ? <Pause size={16} /> : <Play size={16} />}
             {config.enabled ? 'Pause Auto-Trading' : 'Enable Automated Trading'}
           </button>
+
+          {config.enabled && (
+            <button
+              onClick={handleScanAndTrade}
+              disabled={scanning}
+              title="Scan top Indian stocks with AI models and auto-execute positions with >80% confidence"
+              style={{
+                padding: '12px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#818CF8',
+                border: '1px solid rgba(99, 102, 241, 0.4)', cursor: scanning ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Zap size={16} />
+              {scanning ? 'Analyzing Stocks...' : 'Scan & Trade AI Signals (>80%)'}
+            </button>
+          )}
 
           {config.enabled && (
             <button
@@ -374,11 +432,25 @@ export default function AutoTradePage() {
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
                 <Cpu size={36} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
                 <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>No active open positions</p>
-                <p style={{ fontSize: 12, margin: '6px 0 0', opacity: 0.8 }}>
+                <p style={{ fontSize: 12, margin: '6px 0 16px', opacity: 0.8 }}>
                   {config.enabled
-                    ? 'Automation is actively listening for high-confidence AI breakout signals to open positions.'
+                    ? 'Automation is active. Click below to analyze top Indian stocks and auto-execute positions with >80% AI confidence.'
                     : 'Enable automated trading to start scanning for high-probability setups.'}
                 </p>
+                {config.enabled && (
+                  <button
+                    onClick={handleScanAndTrade}
+                    disabled={scanning}
+                    style={{
+                      padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                      backgroundColor: '#6366F1', color: '#FFFFFF', border: 'none', cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
+                    }}
+                  >
+                    <Zap size={15} /> {scanning ? 'Analyzing Indian Stocks...' : 'Scan & Trade Top Signals (>80% Conf)'}
+                  </button>
+                )}
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -401,7 +473,13 @@ export default function AutoTradePage() {
                         <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
                           <td style={{ padding: '12px', fontWeight: 700, color: 'var(--text-1)' }}>
                             {p.symbol}
-                            <span style={{ fontSize: 10, marginLeft: 6, color: '#818CF8', background: 'rgba(99, 102, 241, 0.15)', padding: '2px 6px', borderRadius: 4 }}>
+                            <span style={{
+                              fontSize: 11, marginLeft: 8, fontWeight: 800,
+                              color: p.ai_confidence >= 85 ? '#10B981' : '#818CF8',
+                              background: p.ai_confidence >= 85 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                              border: p.ai_confidence >= 85 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(99, 102, 241, 0.3)',
+                              padding: '2px 8px', borderRadius: 6
+                            }}>
                               AI {p.ai_confidence}%
                             </span>
                           </td>
