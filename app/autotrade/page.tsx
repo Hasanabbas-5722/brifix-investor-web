@@ -106,6 +106,8 @@ export default function AutoTradePage() {
         setConfig(prev => ({ ...prev, enabled: res.data.enabled }));
         setStatusMsg(res.data.message);
         setTimeout(() => setStatusMsg(''), 3000);
+        await Promise.all([loadPositions(), loadBrokerStatus(), loadHistory()]);
+        setTimeout(() => { loadPositions(); loadBrokerStatus(); }, 1500);
       }
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to toggle automated trading');
