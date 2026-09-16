@@ -90,8 +90,8 @@ class SocketService {
     this.socket?.emit('subscribe_chart', data);
   }
 
-  unsubscribeFromChart() {
-    this.socket?.emit('unsubscribe_chart', {});
+  unsubscribeFromChart(data?: { symbol?: string; interval?: string }) {
+    this.socket?.emit('unsubscribe_chart', data ?? {});
   }
 }
 

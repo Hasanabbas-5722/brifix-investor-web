@@ -364,53 +364,102 @@ function ChartComponent() {
       socketService.subscribeToStockPrice({ symbol: sym.id, token: sym.id });
       socketService.subscribeToIndexes({ tokens: [sym.label, sym.id, 'Nifty 50', 'Nifty Bank'] });
 
+      // Strict symbol matching helper to prevent cross-symbol contamination
+      const isSymbolMatch = (token?: any, symbol?: any, ticker?: any) => {
+        const curLabel = sym.label.toUpperCase();
+        const curId = sym.id.toUpperCase();
+        const t = String(token || '').toUpperCase();
+        const s = String(symbol || '').toUpperCase();
+        const tk = String(ticker || '').toUpperCase();
+
+        if (sym.category === 'Index') {
+          if (curLabel.includes('NIFTY 50') || curId === 'NIFTY50') {
+            return t === '99926000' || s.includes('NIFTY 50') || tk === '^NSEI' || s === 'NIFTY50';
+          }
+          if (curLabel.includes('BANK NIFTY') || curId === 'BANKNIFTY') {
+            return t === '99926009' || s.includes('BANK NIFTY') || s.includes('NIFTY BANK') || tk === '^NSEBANK' || s === 'BANKNIFTY';
+          }
+          if (curLabel.includes('SENSEX') || curId === 'SENSEX') {
+            return t === '99919000' || s.includes('SENSEX') || tk === '^BSESN';
+          }
+          if (curLabel.includes('FIN NIFTY') || curId === 'FINNIFTY') {
+            return t === '99926037' || s.includes('FIN NIFTY') || s.includes('FINNIFTY') || tk.includes('NIFTY_FIN') || tk.includes('CNXFIN');
+          }
+          return s === curLabel || s === curId || t === curId;
+        }
+
+        // For Stocks: reject index tokens/tickers
+        const indexIdentifiers = ['99926000', '99926009', '99919000', '99926037', '^NSEI', '^NSEBANK', '^BSESN'];
+        if (indexIdentifiers.includes(t) || indexIdentifiers.includes(tk) || s.includes('NIFTY') || s.includes('SENSEX')) {
+          return false;
+        }
+
+        return (
+          t === curId ||
+          s === curId ||
+          s === curLabel ||
+          tk === `${curId}.NS` ||
+          tk === `${curLabel}.NS` ||
+          s.startsWith(curId)
+        );
+      };
+
+      // Discard ticks that deviate abnormally (>15%) from the previous candle close
+      const isPriceValid = (livePrice: number, referencePrice: number) => {
+        if (!livePrice || isNaN(livePrice) || livePrice <= 0) return false;
+        if (!referencePrice || referencePrice <= 0) return true;
+        const deviation = Math.abs(livePrice - referencePrice) / referencePrice;
+        return deviation < 0.15;
+      };
+
       const handleIndexTick = (data: any) => {
-        if (!data) return;
-        const symName = (data.symbol || '').toUpperCase();
-        const currentSym = sym.label.toUpperCase();
-        const currentId = sym.id.toUpperCase();
+        if (!data || !data.ltp) return;
+        if (!isSymbolMatch(data.token, data.symbol, data.ticker)) {
+          return;
+        }
 
-        const match =
-          symName === currentSym ||
-          symName === currentId ||
-          (data.token && (data.token.toUpperCase() === currentId || data.token.toUpperCase() === currentSym)) ||
-          (currentSym.includes('NIFTY 50') && data.token === '99926000') ||
-          (currentSym.includes('BANK NIFTY') && data.token === '99926009') ||
-          (currentSym.includes('FIN NIFTY') && data.token === '99926037') ||
-          (currentSym.includes('SENSEX') && data.token === '99919000');
+        const livePrice = Number(data.ltp);
+        if (livePrice <= 0) return;
 
-        if (match && data.ltp) {
-          const livePrice = Number(data.ltp);
-          setOhlc(prev => {
-            const chg = prev.c > 0 ? +(livePrice - (prev.c - prev.chg)).toFixed(2) : (data.change ?? prev.chg);
-            const prevClose = prev.c - prev.chg;
-            const chgPct = prevClose > 0 ? +((chg / prevClose) * 100).toFixed(2) : (data.pChange ?? prev.chgPct);
-            return {
-              ...prev,
-              c: livePrice,
-              h: Math.max(prev.h, livePrice),
-              l: prev.l > 0 ? Math.min(prev.l, livePrice) : livePrice,
-              chg,
-              chgPct,
-            };
-          });
+        const activeCandles = candlesRef.current;
+        const lastCandle = activeCandles[activeCandles.length - 1];
 
-          // Update active candlestick directly in lightweight-charts for 0-latency feedback
-          const activeCandles = candlesRef.current;
-          if (mainSeries.current && activeCandles.length > 0) {
-            const lastCandle = activeCandles[activeCandles.length - 1];
-            const updated = {
-              time: lastCandle.time as any,
-              open: lastCandle.open,
-              high: Math.max(lastCandle.high, livePrice),
-              low: Math.min(lastCandle.low, livePrice),
-              close: livePrice,
-            };
-            try {
-              mainSeries.current.update(chartTypeRef.current === 'candles' ? updated : { time: updated.time, value: livePrice });
-            } catch {
-              // ignore safe update errors
-            }
+        // Discard contaminated or anomalous ticks
+        if (lastCandle && !isPriceValid(livePrice, lastCandle.close)) {
+          return;
+        }
+
+        setOhlc(prev => {
+          const chg = prev.c > 0 ? +(livePrice - (prev.c - prev.chg)).toFixed(2) : (data.change ?? prev.chg);
+          const prevClose = prev.c - prev.chg;
+          const chgPct = prevClose > 0 ? +((chg / prevClose) * 100).toFixed(2) : (data.pChange ?? prev.chgPct);
+          return {
+            ...prev,
+            c: livePrice,
+            h: Math.max(prev.h, livePrice),
+            l: prev.l > 0 ? Math.min(prev.l, livePrice) : livePrice,
+            chg,
+            chgPct,
+          };
+        });
+
+        // Update active candlestick in chart
+        if (mainSeries.current && activeCandles.length > 0) {
+          const updated: ChartCandle = {
+            time: lastCandle.time,
+            open: lastCandle.open,
+            high: Math.max(lastCandle.high, livePrice),
+            low: Math.min(lastCandle.low, livePrice),
+            close: livePrice,
+            volume: lastCandle.volume,
+          };
+          activeCandles[activeCandles.length - 1] = updated;
+          try {
+            mainSeries.current.update(
+              chartTypeRef.current === 'candles' ? updated : { time: updated.time, value: livePrice }
+            );
+          } catch {
+            // ignore safe update errors
           }
         }
       };
@@ -418,30 +467,76 @@ function ChartComponent() {
       socket.on('indexes_data', handleIndexTick);
       socket.on('stock_price', handleIndexTick);
       socket.on('chart_data', (payload: any) => {
-        if (payload?.candle) {
-          const c = payload.candle;
-          const livePrice = Number(c.close || payload.currentPrice || 0);
-          setOhlc(prev => ({
-            ...prev,
-            c: livePrice > 0 ? livePrice : prev.c,
-            h: Math.max(prev.h, Number(c.high || livePrice)),
-            l: prev.l > 0 ? Math.min(prev.l, Number(c.low || livePrice)) : livePrice,
-            vol: c.volume ?? prev.vol,
-          }));
+        if (!payload?.candle) return;
+        if (!isSymbolMatch(payload.symbol, payload.candle?.symbol, payload.candle?.ticker)) {
+          return;
+        }
 
-          const activeCandles = candlesRef.current;
-          if (mainSeries.current && activeCandles.length > 0) {
-            const lastCandle = activeCandles[activeCandles.length - 1];
-            const candleTime = c.time > 1e11 ? Math.floor(c.time / 1000) : (c.time || lastCandle.time);
-            const updated = {
-              time: candleTime as any,
-              open: Number(c.open || lastCandle.open),
-              high: Number(c.high || Math.max(lastCandle.high, livePrice)),
-              low: Number(c.low || Math.min(lastCandle.low, livePrice)),
+        const c = payload.candle;
+        const livePrice = Number(c.close || payload.currentPrice || 0);
+        if (livePrice <= 0) return;
+
+        const activeCandles = candlesRef.current;
+        const lastCandle = activeCandles[activeCandles.length - 1];
+
+        // Check tick sanity
+        if (lastCandle && !isPriceValid(livePrice, lastCandle.close)) {
+          return;
+        }
+
+        const prevClose = lastCandle ? lastCandle.close : livePrice;
+        const chg = +(livePrice - prevClose).toFixed(2);
+        const chgPct = prevClose > 0 ? +((chg / prevClose) * 100).toFixed(2) : 0;
+
+        setOhlc(prev => ({
+          ...prev,
+          c: livePrice,
+          h: Math.max(prev.h, Number(c.high || livePrice)),
+          l: prev.l > 0 ? Math.min(prev.l, Number(c.low || livePrice)) : livePrice,
+          chg,
+          chgPct,
+          vol: c.volume ?? prev.vol,
+        }));
+
+        if (mainSeries.current && activeCandles.length > 0) {
+          const cTime = Number(c.time);
+          const candleTime = cTime > 1e11 ? Math.floor(cTime / 1000) : (cTime || lastCandle.time);
+
+          if (candleTime > lastCandle.time) {
+            // A new candle interval has begun!
+            const newCandle: ChartCandle = {
+              time: candleTime,
+              open: Number(c.open || livePrice),
+              high: Number(c.high || livePrice),
+              low: Number(c.low || livePrice),
               close: livePrice,
+              volume: Number(c.volume || 0),
             };
+            const updatedList = [...activeCandles, newCandle];
+            candlesRef.current = updatedList;
+            setCandles(updatedList);
             try {
-              mainSeries.current.update(chartTypeRef.current === 'candles' ? updated : { time: updated.time, value: livePrice });
+              mainSeries.current.update(
+                chartTypeRef.current === 'candles' ? newCandle : { time: newCandle.time, value: livePrice }
+              );
+            } catch {
+              // ignore
+            }
+          } else {
+            // Update the existing active candle
+            const updatedCandle: ChartCandle = {
+              time: lastCandle.time,
+              open: Number(c.open || lastCandle.open),
+              high: Math.max(lastCandle.high, livePrice, Number(c.high || 0)),
+              low: Math.min(lastCandle.low, livePrice, Number(c.low || livePrice)),
+              close: livePrice,
+              volume: Number(c.volume ?? lastCandle.volume),
+            };
+            activeCandles[activeCandles.length - 1] = updatedCandle;
+            try {
+              mainSeries.current.update(
+                chartTypeRef.current === 'candles' ? updatedCandle : { time: updatedCandle.time, value: livePrice }
+              );
             } catch {
               // ignore
             }
@@ -453,16 +548,18 @@ function ChartComponent() {
         socket.off('indexes_data', handleIndexTick);
         socket.off('stock_price', handleIndexTick);
         socket.off('chart_data');
-        socketService.unsubscribeFromChart();
+        socketService.unsubscribeFromChart({ symbol: sym.id, interval: tf });
       };
     }
-  }, [sym.label, sym.id, tf]);
+  }, [sym.label, sym.id, sym.category, tf]);
 
   // Periodic fast background sync (every 2.5 seconds) to ensure prices and chart stay fresh
   useEffect(() => {
+    let isCancelled = false;
     const timer = setInterval(async () => {
       try {
         const res = await fetchChartData({ symbol: sym.label, interval: tf });
+        if (isCancelled) return;
         if (res.success && res.data?.currentPrice) {
           const ltp = res.data.currentPrice;
           const chg = res.data.change ?? 0;
@@ -476,20 +573,50 @@ function ChartComponent() {
             chgPct: +chgPct.toFixed(2),
           }));
 
-          // Also update active candle in the chart series
-          if (mainSeries.current && candles.length > 0) {
-            const lastCandle = candles[candles.length - 1];
-            const updated = {
-              time: lastCandle.time as any,
-              open: lastCandle.open,
-              high: Math.max(lastCandle.high, ltp),
-              low: Math.min(lastCandle.low, ltp),
-              close: ltp,
-            };
-            try {
-              mainSeries.current.update(chartType === 'candles' ? updated : { time: updated.time, value: ltp });
-            } catch {
-              // ignore safe update errors
+          const fetchedCandles = res.data.candles;
+          const currentCandles = candlesRef.current;
+
+          if (fetchedCandles && fetchedCandles.length > 0) {
+            const lastFetched = fetchedCandles[fetchedCandles.length - 1];
+            const lastCurrent = currentCandles[currentCandles.length - 1];
+
+            // If a new candle was added in the fetched data or history length changed
+            if (!lastCurrent || fetchedCandles.length !== currentCandles.length || lastFetched.time > lastCurrent.time) {
+              setCandles(fetchedCandles);
+              candlesRef.current = fetchedCandles;
+              if (mainSeries.current) {
+                try {
+                  mainSeries.current.setData(
+                    chartTypeRef.current === 'candles'
+                      ? fetchedCandles
+                      : fetchedCandles.map(d => ({ time: d.time, value: d.close }))
+                  );
+                } catch {
+                  // ignore
+                }
+              }
+            } else if (mainSeries.current && currentCandles.length > 0) {
+              // Same candle, update active candle bounds and close
+              const updated = {
+                time: lastCurrent.time as any,
+                open: lastCurrent.open,
+                high: Math.max(lastCurrent.high, ltp),
+                low: Math.min(lastCurrent.low, ltp),
+                close: ltp,
+              };
+              currentCandles[currentCandles.length - 1] = {
+                ...lastCurrent,
+                high: updated.high,
+                low: updated.low,
+                close: ltp,
+              };
+              try {
+                mainSeries.current.update(
+                  chartTypeRef.current === 'candles' ? updated : { time: updated.time, value: ltp }
+                );
+              } catch {
+                // ignore safe update errors
+              }
             }
           }
         }
@@ -498,8 +625,11 @@ function ChartComponent() {
       }
     }, 2500);
 
-    return () => clearInterval(timer);
-  }, [sym.label, tf, candles, chartType]);
+    return () => {
+      isCancelled = true;
+      clearInterval(timer);
+    };
+  }, [sym.label, tf]);
 
   /* ── 3. Build & Render Lightweight Charts ─ */
   useEffect(() => {
